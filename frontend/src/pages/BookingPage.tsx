@@ -5,8 +5,8 @@ import { Bed, Plane, Calendar, Users, MapPin, ChevronRight, ArrowLeft, Star, Shi
 import { getFlightById, getRoomById } from '../api/client';
 import type { ApiFlight, ApiRoom } from '../api/types';
 import { useToast } from '../hooks/useToast';
+import { getRoomImageById } from '../data/roomImages';
 
-const roomHero = 'https://images.unsplash.com/photo-1540541338287-41700207eda6?auto=format&fit=crop&w=1200&q=80';
 const flightHero = 'https://images.unsplash.com/photo-1436491865332-7a61a109c0f3?auto=format&fit=crop&w=1200&q=80';
 
 type BookingUiType = 'room' | 'flight';
@@ -69,7 +69,7 @@ const BookingPage = () => {
 
   const title = type === 'room' ? room?.name : `${flight?.source} → ${flight?.destination}`;
   const locationLine = type === 'room' ? room?.location : `${flight?.source} → ${flight?.destination}`;
-  const amount = (item as ApiRoom | ApiFlight).price + 45;
+  const amount = (item as ApiRoom | ApiFlight).price;
 
   const handleProceed = () => {
     if (step === 1) {
@@ -95,7 +95,14 @@ const BookingPage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
           <div className="relative aspect-[16/10] rounded-[3rem] overflow-hidden shadow-2xl shadow-indigo-100 ring-1 ring-slate-100/50">
-            <img src={type === 'room' ? roomHero : flightHero} alt="" className="w-full h-full object-cover" />
+            <img
+              src={type === 'room' ? (room?.imageUrl || getRoomImageById(numericId)) : (flight?.imageUrl || flightHero)}
+              alt=""
+              onError={(event) => {
+                event.currentTarget.src = `https://picsum.photos/seed/booking-room-fallback-${numericId}/1200/800`;
+              }}
+              className="w-full h-full object-cover"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
           </div>
 
@@ -191,10 +198,9 @@ const BookingPage = () => {
                   </div>
 
                   <div className="space-y-4">
-                    <p className="text-sm font-bold text-slate-400 px-2 line-through mb-1">Subtotal: ${(item as ApiRoom | ApiFlight).price}</p>
                     <p className="text-sm font-bold text-slate-500 px-2 flex justify-between">
-                      <span>Service Fee & Tax:</span>
-                      <span>$45</span>
+                      <span>Fare / Rate:</span>
+                      <span>${(item as ApiRoom | ApiFlight).price}</span>
                     </p>
                   </div>
 

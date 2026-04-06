@@ -12,6 +12,15 @@ public class RoomRequestDTO {
     @NotBlank
     private String location;
 
+    @NotBlank
+    private String imageUrl;
+
+    @NotBlank
+    private String roomType;
+
+    @NotBlank
+    private String description;
+
     @NotNull
     @DecimalMin(value = "0.0", inclusive = true)
     private Double price;
@@ -33,6 +42,30 @@ public class RoomRequestDTO {
 
     public void setLocation(String location) {
         this.location = location;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getRoomType() {
+        return roomType;
+    }
+
+    public void setRoomType(String roomType) {
+        this.roomType = roomType;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public Double getPrice() {

@@ -7,20 +7,12 @@ import Card from '../components/Card';
 import { getRooms } from '../api/client';
 import type { ApiRoom } from '../api/types';
 import { useToast } from '../hooks/useToast';
-
-const roomImages = [
-  'https://images.unsplash.com/photo-1540541338287-41700207eda6?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1502784444187-359ac186c5bb?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1578894381163-e72c17f2d45f?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1523217582562-09d0def993a6?auto=format&fit=crop&w=800&q=80',
-];
+import { getRoomImageById } from '../data/roomImages';
 
 const ratingById = (id: number) => {
   const ratings = [4.9, 4.8, 4.7, 4.6];
   return ratings[id % ratings.length];
 };
-
-const imageById = (id: number) => roomImages[id % roomImages.length];
 
 const RoomCard = ({ room, index }: { room: ApiRoom; index: number }) => {
   const navigate = useNavigate();
@@ -37,8 +29,11 @@ const RoomCard = ({ room, index }: { room: ApiRoom; index: number }) => {
       <Card className="h-full overflow-hidden !rounded-2xl">
         <div className="relative aspect-[4/3] overflow-hidden">
           <img
-            src={imageById(room.id)}
+            src={room.imageUrl || getRoomImageById(room.id)}
             alt={room.name}
+            onError={(event) => {
+              event.currentTarget.src = `https://picsum.photos/seed/room-fallback-${room.id}/1200/800`;
+            }}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-115"
           />
           <div className="absolute top-4 right-4 flex flex-col gap-2">
@@ -68,12 +63,14 @@ const RoomCard = ({ room, index }: { room: ApiRoom; index: number }) => {
           <div className="flex items-center gap-1.5 text-slate-500 mb-4 font-semibold text-sm">
             <MapPin className="w-4 h-4 text-slate-400" />
             <span>{room.location}</span>
+            <span className="text-slate-300">•</span>
+            <span>{room.roomType || 'Standard'}</span>
           </div>
 
           <p className="text-slate-400 text-sm line-clamp-2 mb-6 font-medium leading-relaxed">
-            {room.available
+            {room.description?.trim() || (room.available
               ? 'Available now for instant booking.'
-              : 'Temporarily unavailable. Check again soon.'}
+              : 'Temporarily unavailable. Check again soon.')}
           </p>
 
           <div className="mt-auto flex items-center justify-between">

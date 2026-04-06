@@ -55,18 +55,28 @@ public class FlightService {
     }
 
     private void mapRequestToEntity(FlightRequestDTO request, Flight flight) {
+        flight.setFlightName(request.getFlightName());
         flight.setSource(request.getSource());
         flight.setDestination(request.getDestination());
-        flight.setDate(request.getDate());
+        flight.setDepartureTime(request.getDepartureTime());
+        flight.setArrivalTime(request.getArrivalTime());
+        flight.setImageUrl(request.getImageUrl());
+        flight.setCabinClass(request.getCabinClass());
+        flight.setDate(request.getDepartureTime());
         flight.setPrice(request.getPrice());
     }
 
     private FlightResponseDTO toResponse(Flight flight) {
         return new FlightResponseDTO(
                 flight.getId(),
+                flight.getFlightName(),
                 flight.getSource(),
                 flight.getDestination(),
                 flight.getDate(),
+                flight.getDepartureTime(),
+                flight.getArrivalTime(),
+                flight.getImageUrl(),
+                flight.getCabinClass(),
                 flight.getPrice()
         );
     }

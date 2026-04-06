@@ -20,11 +20,26 @@ public class Flight {
     @Column(nullable = false)
     private String source;
 
+    @Column
+    private String flightName;
+
     @Column(nullable = false)
     private String destination;
 
     @Column(nullable = false)
     private LocalDateTime date;
+
+    @Column
+    private LocalDateTime departureTime;
+
+    @Column
+    private LocalDateTime arrivalTime;
+
+    @Column
+    private String imageUrl;
+
+    @Column
+    private String cabinClass;
 
     @Column(nullable = false)
     private Double price;
@@ -45,6 +60,14 @@ public class Flight {
         this.source = source;
     }
 
+    public String getFlightName() {
+        return flightName;
+    }
+
+    public void setFlightName(String flightName) {
+        this.flightName = flightName;
+    }
+
     public String getDestination() {
         return destination;
     }
@@ -59,6 +82,38 @@ public class Flight {
 
     public void setDate(LocalDateTime date) {
         this.date = date;
+    }
+
+    public LocalDateTime getDepartureTime() {
+        return departureTime;
+    }
+
+    public void setDepartureTime(LocalDateTime departureTime) {
+        this.departureTime = departureTime;
+    }
+
+    public LocalDateTime getArrivalTime() {
+        return arrivalTime;
+    }
+
+    public void setArrivalTime(LocalDateTime arrivalTime) {
+        this.arrivalTime = arrivalTime;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getCabinClass() {
+        return cabinClass;
+    }
+
+    public void setCabinClass(String cabinClass) {
+        this.cabinClass = cabinClass;
     }
 
     public Double getPrice() {

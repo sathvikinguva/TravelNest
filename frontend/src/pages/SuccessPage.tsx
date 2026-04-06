@@ -15,7 +15,7 @@ const SuccessPage = () => {
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center text-center px-4 relative overflow-hidden">
-      {/* Confetti particles mock */}
+      {/* Confetti particles */}
       <AnimatePresence>
         {showConfetti && (
           <div className="absolute inset-0 pointer-events-none z-0">

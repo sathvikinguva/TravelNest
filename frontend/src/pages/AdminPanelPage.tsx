@@ -1,433 +1,536 @@
-import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  BarChart3, PlusCircle, Bed, Plane, History, Users, 
-  Settings, ChevronRight, Sparkles, LayoutGrid, Search, AlertCircle
+import { useEffect, useMemo, useState } from 'react';
+import {
+  AlertCircle,
+  Bed,
+  ChevronRight,
+  History,
+  PencilLine,
+  Plane,
+  PlusCircle,
+  Trash2,
+  Users,
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { createAdminFlight, createAdminRoom, getAdminBookings } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import {
+  createAdminFlight,
+  createAdminRoom,
+  deleteAdminUser,
+  getAdminBookings,
+  getAdminUsers,
+  getFlights,
+  getRooms,
+  updateAdminFlight,
+  updateAdminRoom,
+} from '../api/client';
+import type { ApiAdminUser, ApiBooking, ApiFlight, ApiRoom } from '../api/types';
 import { useToast } from '../hooks/useToast';
-import type { ApiBooking } from '../api/types';
+
+const toLocalDateTimeInput = (value: string | undefined) => {
+  if (!value) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+  const hours = String(parsed.getHours()).padStart(2, '0');
+  const minutes = String(parsed.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 const AdminPanelPage = () => {
   const { user } = useAuth();
-   const { showToast } = useToast();
   const navigate = useNavigate();
+  const { showToast } = useToast();
+
   const [activeTab, setActiveTab] = useState('dashboard');
-   const [roomForm, setRoomForm] = useState({
-      name: '',
-      location: '',
-      price: '',
-      available: true,
-   });
-   const [flightForm, setFlightForm] = useState({
-      source: '',
-      destination: '',
-      date: '',
-      price: '',
-   });
-   const [isPublishingRoom, setIsPublishingRoom] = useState(false);
-   const [isPublishingFlight, setIsPublishingFlight] = useState(false);
-   const [adminBookings, setAdminBookings] = useState<ApiBooking[]>([]);
+  const [adminBookings, setAdminBookings] = useState<ApiBooking[]>([]);
+  const [adminUsers, setAdminUsers] = useState<ApiAdminUser[]>([]);
+  const [rooms, setRooms] = useState<ApiRoom[]>([]);
+  const [flights, setFlights] = useState<ApiFlight[]>([]);
 
-   useEffect(() => {
-      if (activeTab !== 'bookings' || user?.role !== 'ADMIN') {
-         return;
-      }
+  const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-      const loadAdminBookings = async () => {
-         try {
-            const data = await getAdminBookings();
-            setAdminBookings(data);
-         } catch {
-            showToast('Unable to load bookings. Ensure you are signed in as admin.', 'error');
-         }
-      };
+  const [roomForm, setRoomForm] = useState({
+    name: '',
+    imageUrl: '',
+    location: '',
+    roomType: '',
+    description: '',
+    price: '',
+    available: true,
+  });
 
-      void loadAdminBookings();
-   }, [activeTab, showToast, user?.role]);
+  const [flightForm, setFlightForm] = useState({
+    flightName: '',
+    source: '',
+    destination: '',
+    departureTime: '',
+    arrivalTime: '',
+    imageUrl: '',
+    fare: '',
+    cabinClass: '',
+  });
 
-   const handlePublishRoom = async () => {
-      const price = Number(roomForm.price);
-      if (!roomForm.name.trim() || !roomForm.location.trim() || Number.isNaN(price)) {
-         showToast('Please fill valid room name, location, and price.', 'error');
-         return;
-      }
+  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
+  const [selectedFlightId, setSelectedFlightId] = useState<number | null>(null);
 
-      setIsPublishingRoom(true);
+  const roomForEdit = useMemo(
+    () => rooms.find((room) => room.id === selectedRoomId) ?? null,
+    [rooms, selectedRoomId]
+  );
+
+  const flightForEdit = useMemo(
+    () => flights.find((flight) => flight.id === selectedFlightId) ?? null,
+    [flights, selectedFlightId]
+  );
+
+  useEffect(() => {
+    if (user?.role !== 'ADMIN') return;
+
+    const loadDashboardData = async () => {
       try {
-         await createAdminRoom({
-            name: roomForm.name.trim(),
-            location: roomForm.location.trim(),
-            price,
-            available: roomForm.available,
-         });
-         showToast('Room published successfully.', 'success');
-         setRoomForm({ name: '', location: '', price: '', available: true });
+        const [bookingsData, usersData, roomsData, flightsData] = await Promise.all([
+          getAdminBookings(),
+          getAdminUsers(),
+          getRooms(),
+          getFlights(),
+        ]);
+        setAdminBookings(bookingsData);
+        setAdminUsers(usersData);
+        setRooms(roomsData);
+        setFlights(flightsData);
       } catch {
-         showToast('Room publish failed. Re-login as admin and try again.', 'error');
-      } finally {
-         setIsPublishingRoom(false);
+        showToast('Unable to load admin data.', 'error');
       }
-   };
+    };
 
-   const handlePublishFlight = async () => {
-      const price = Number(flightForm.price);
-      if (!flightForm.source.trim() || !flightForm.destination.trim() || !flightForm.date || Number.isNaN(price)) {
-         showToast('Please fill valid source, destination, date, and price.', 'error');
-         return;
-      }
+    void loadDashboardData();
+  }, [showToast, user?.role]);
 
-      setIsPublishingFlight(true);
-      try {
-         await createAdminFlight({
-            source: flightForm.source.trim(),
-            destination: flightForm.destination.trim(),
-            date: new Date(flightForm.date).toISOString(),
-            price,
-         });
-         showToast('Flight published successfully.', 'success');
-         setFlightForm({ source: '', destination: '', date: '', price: '' });
-      } catch {
-         showToast('Flight publish failed. Re-login as admin and try again.', 'error');
-      } finally {
-         setIsPublishingFlight(false);
-      }
-   };
+  useEffect(() => {
+    if (!roomForEdit) return;
+    setRoomForm({
+      name: roomForEdit.name,
+      imageUrl: roomForEdit.imageUrl ?? '',
+      location: roomForEdit.location,
+      roomType: roomForEdit.roomType ?? '',
+      description: roomForEdit.description ?? '',
+      price: String(roomForEdit.price),
+      available: roomForEdit.available,
+    });
+  }, [roomForEdit]);
+
+  useEffect(() => {
+    if (!flightForEdit) return;
+    setFlightForm({
+      flightName: flightForEdit.flightName ?? '',
+      source: flightForEdit.source,
+      destination: flightForEdit.destination,
+      departureTime: toLocalDateTimeInput(flightForEdit.departureTime),
+      arrivalTime: toLocalDateTimeInput(flightForEdit.arrivalTime),
+      imageUrl: flightForEdit.imageUrl ?? '',
+      fare: String(flightForEdit.price),
+      cabinClass: flightForEdit.cabinClass ?? '',
+    });
+  }, [flightForEdit]);
 
   if (user?.role !== 'ADMIN') {
     return (
-      <div className="p-20 text-center flex flex-col items-center">
-        <AlertCircle className="w-12 h-12 text-red-500 mb-6" />
-        <h1 className="text-3xl font-black text-slate-900 mb-4">Unauthorized Access</h1>
-        <p className="text-slate-500 font-medium mb-12">You must be an admin to view this page.</p>
-        <button onClick={() => navigate('/')} className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black">Return Home</button>
+      <div className="p-20 text-center flex flex-col items-center gap-6">
+        <AlertCircle className="w-12 h-12 text-red-500" />
+        <h1 className="text-3xl font-black text-slate-900">Unauthorized Access</h1>
+        <p className="text-slate-500 font-medium">You must be an admin to view this page.</p>
+        <button onClick={() => navigate('/')} className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black">
+          Return Home
+        </button>
       </div>
     );
   }
 
+  const activeBookingsCount = adminBookings.filter((booking) => booking.status === 'BOOKED').length;
+  const cancelledBookingsCount = adminBookings.filter((booking) => booking.status === 'CANCELLED').length;
+
+  const resetRoomForm = () => {
+    setRoomForm({
+      name: '',
+      imageUrl: '',
+      location: '',
+      roomType: '',
+      description: '',
+      price: '',
+      available: true,
+    });
+  };
+
+  const resetFlightForm = () => {
+    setFlightForm({
+      flightName: '',
+      source: '',
+      destination: '',
+      departureTime: '',
+      arrivalTime: '',
+      imageUrl: '',
+      fare: '',
+      cabinClass: '',
+    });
+  };
+
+  const validateRoomForm = () => {
+    const price = Number(roomForm.price);
+    if (
+      !roomForm.name.trim() ||
+      !roomForm.imageUrl.trim() ||
+      !roomForm.location.trim() ||
+      !roomForm.roomType.trim() ||
+      !roomForm.description.trim() ||
+      Number.isNaN(price)
+    ) {
+      showToast('Fill all room fields with valid values.', 'error');
+      return null;
+    }
+
+    return {
+      name: roomForm.name.trim(),
+      imageUrl: roomForm.imageUrl.trim(),
+      location: roomForm.location.trim(),
+      roomType: roomForm.roomType.trim(),
+      description: roomForm.description.trim(),
+      price,
+      available: roomForm.available,
+    };
+  };
+
+  const validateFlightForm = () => {
+    const price = Number(flightForm.fare);
+    if (
+      !flightForm.source.trim() ||
+      !flightForm.destination.trim() ||
+      !flightForm.flightName.trim() ||
+      !flightForm.departureTime ||
+      !flightForm.arrivalTime ||
+      !flightForm.imageUrl.trim() ||
+      !flightForm.cabinClass.trim() ||
+      Number.isNaN(price)
+    ) {
+      showToast('Fill all flight fields with valid values.', 'error');
+      return null;
+    }
+
+    return {
+      flightName: flightForm.flightName.trim(),
+      source: flightForm.source.trim(),
+      destination: flightForm.destination.trim(),
+      departureTime: flightForm.departureTime,
+      arrivalTime: flightForm.arrivalTime,
+      imageUrl: flightForm.imageUrl.trim(),
+      cabinClass: flightForm.cabinClass.trim(),
+      price,
+    };
+  };
+
+  const refreshCatalogs = async () => {
+    const [roomsData, flightsData] = await Promise.all([getRooms(), getFlights()]);
+    setRooms(roomsData);
+    setFlights(flightsData);
+  };
+
+  const handleCreateRoom = async () => {
+    const payload = validateRoomForm();
+    if (!payload) return;
+
+    setIsSubmitting(true);
+    try {
+      await createAdminRoom(payload);
+      await refreshCatalogs();
+      resetRoomForm();
+      showToast('Room created successfully.', 'success');
+    } catch {
+      showToast('Unable to create room.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateRoom = async () => {
+    if (!selectedRoomId) {
+      showToast('Select a room to update.', 'error');
+      return;
+    }
+
+    const payload = validateRoomForm();
+    if (!payload) return;
+
+    setIsSubmitting(true);
+    try {
+      await updateAdminRoom(selectedRoomId, payload);
+      await refreshCatalogs();
+      showToast('Room updated successfully.', 'success');
+    } catch {
+      showToast('Unable to update room.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateFlight = async () => {
+    const payload = validateFlightForm();
+    if (!payload) return;
+
+    setIsSubmitting(true);
+    try {
+      await createAdminFlight(payload);
+      await refreshCatalogs();
+      resetFlightForm();
+      showToast('Flight created successfully.', 'success');
+    } catch {
+      showToast('Unable to create flight.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateFlight = async () => {
+    if (!selectedFlightId) {
+      showToast('Select a flight to update.', 'error');
+      return;
+    }
+
+    const payload = validateFlightForm();
+    if (!payload) return;
+
+    setIsSubmitting(true);
+    try {
+      await updateAdminFlight(selectedFlightId, payload);
+      await refreshCatalogs();
+      showToast('Flight updated successfully.', 'success');
+    } catch {
+      showToast('Unable to update flight.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    setDeletingUserId(userId);
+    try {
+      await deleteAdminUser(userId);
+      setAdminUsers((prev) => prev.filter((entry) => entry.id !== userId));
+      showToast('User removed successfully.', 'success');
+    } catch {
+      showToast('Unable to remove user.', 'error');
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
   const sidebarLinks = [
-    { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
-    { id: 'add-room', name: 'Add Room', icon: PlusCircle, sub: Bed },
-    { id: 'add-flight', name: 'Add Flight', icon: PlusCircle, sub: Plane },
+    { id: 'dashboard', name: 'Dashboard', icon: AlertCircle },
+    { id: 'add-room', name: 'Add Room', icon: PlusCircle },
+    { id: 'add-flight', name: 'Add Flight', icon: PlusCircle },
+    { id: 'update-room', name: 'Update Room', icon: PencilLine },
+    { id: 'update-flight', name: 'Update Flight', icon: PencilLine },
     { id: 'bookings', name: 'View Bookings', icon: History },
     { id: 'users', name: 'User Management', icon: Users },
-    { id: 'settings', name: 'System Settings', icon: Settings },
   ];
 
   return (
-    <div className="flex min-h-screen bg-slate-50 gap-10 py-10">
-      {/* Sidebar */}
-      <motion.aside 
-        initial={{ x: -100, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        className="hidden lg:flex w-72 flex-col gap-2 shrink-0 glass-card p-6 border border-white max-h-[85vh] sticky top-32 overflow-y-auto"
-      >
-        <div className="flex items-center gap-4 mb-10 px-2 py-2">
-           <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 ring-4 ring-indigo-50">
-              <LayoutGrid className="w-6 h-6 text-white" />
-           </div>
-           <div>
-              <h2 className="text-lg font-black text-slate-900 leading-tight">Admin Console</h2>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ver. 4.0.2-LTS</p>
-           </div>
-        </div>
-
+    <div className="flex min-h-screen bg-slate-50 gap-8 py-10">
+      <aside className="hidden lg:flex w-72 flex-col gap-2 shrink-0 glass-card p-6 border border-white max-h-[85vh] sticky top-32 overflow-y-auto">
+        <h2 className="text-xl font-black text-slate-900 mb-6">Admin Console</h2>
         <nav className="space-y-2">
           {sidebarLinks.map((link) => (
             <button
               key={link.id}
               onClick={() => setActiveTab(link.id)}
-              className={`w-full flex items-center justify-between p-4 rounded-2xl font-black text-sm transition-all group ${
-                activeTab === link.id 
-                  ? 'bg-slate-900 text-white shadow-xl shadow-slate-200' 
-                  : 'text-slate-400 hover:bg-slate-100/50 hover:text-slate-600'
+              className={`w-full flex items-center gap-3 p-3 rounded-2xl font-black text-sm transition-all ${
+                activeTab === link.id ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100'
               }`}
             >
-              <div className="flex items-center gap-3">
-                <link.icon className={`w-5 h-5 ${activeTab === link.id ? 'text-indigo-400' : 'group-hover:text-indigo-500'}`} />
-                <span>{link.name}</span>
-              </div>
-              {link.sub && (
-                 <link.sub className={`w-3.5 h-3.5 ${activeTab === link.id ? 'opacity-80' : 'opacity-20'}`} />
-              )}
+              <link.icon className="w-4 h-4" />
+              <span>{link.name}</span>
             </button>
           ))}
         </nav>
+      </aside>
 
-        <div className="mt-auto p-6 bg-indigo-50 rounded-[2rem] border border-indigo-100 text-center relative overflow-hidden group">
-           <Sparkles className="absolute -top-4 -right-4 w-20 h-20 text-indigo-200 opacity-50 rotate-12 transition-transform group-hover:scale-150" />
-           <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2 relative z-10">Pro Support</p>
-           <p className="text-xs font-bold text-slate-500 leading-relaxed mb-4 relative z-10">Access 24/7 dedicated admin priority support anytime.</p>
-           <button className="w-full bg-white text-indigo-600 py-2 rounded-xl text-xs font-black shadow-sm relative z-10 border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all">Enable Service</button>
-        </div>
-      </motion.aside>
-
-      {/* Content Area */}
-      <main className="flex-1 space-y-10 min-w-0 pr-4">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-           <div>
-              <motion.h1 
-                key={activeTab}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-4xl font-black text-slate-900 tracking-tight capitalize"
-              >
-                {activeTab.replace('-', ' ')}
-              </motion.h1>
-              <p className="text-slate-400 font-bold">Manage system resources and platform configuration.</p>
-           </div>
-           
-           <div className="flex items-center gap-4">
-              <div className="relative glass-card px-4 border-slate-200 shadow-sm flex items-center min-w-[300px]">
-                 <Search className="w-4 h-4 text-slate-400 shrink-0" />
-                 <input type="text" placeholder="Global search..." className="bg-transparent border-none py-3.5 px-3 text-sm font-bold text-slate-600 outline-none w-full" />
-                 <kbd className="hidden md:inline px-2 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-[10px] font-black text-slate-400">⌘K</kbd>
-              </div>
-              <div className="relative w-12 h-12 glass-card flex items-center justify-center border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all cursor-pointer group shadow-sm">
-                 <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white group-hover:scale-125 transition-transform" />
-                 <AlertCircle className="w-6 h-6" />
-              </div>
-           </div>
+      <main className="flex-1 space-y-8 min-w-0 pr-4">
+        <header>
+          <h1 className="text-3xl font-black text-slate-900 capitalize">{activeTab.replace('-', ' ')}</h1>
+          <p className="text-slate-400 font-semibold">Manage rooms, flights, bookings and users.</p>
         </header>
 
-        <AnimatePresence mode="wait">
-           {activeTab === 'dashboard' ? (
-              <motion.div 
-                key="dash" 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="grid grid-cols-1 md:grid-cols-3 gap-8"
-              >
-                 {[
-                    { label: 'Active Users', value: '14,821', trend: '+12%', color: 'from-blue-500 to-indigo-600', sub: 'Last 30 days' },
-                    { label: 'Total Revenue', value: '$84,290', trend: '+8.4%', color: 'from-emerald-500 to-teal-600', sub: 'Gross earnings' },
-                    { label: 'Server Load', value: '24%', trend: '-4%', color: 'from-amber-500 to-orange-600', sub: 'CPU Utilization' }
-                 ].map((stat, i) => (
-                    <motion.div
-                       key={i}
-                       initial={{ opacity: 0, scale: 0.9 }}
-                       animate={{ opacity: 1, scale: 1 }}
-                       transition={{ delay: i * 0.1 }}
-                       className="glass-card p-8 border-white/60 group hover:shadow-2xl transition-all"
-                    >
-                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{stat.label}</p>
-                       <div className="flex items-end justify-between mb-4">
-                          <h3 className="text-4xl font-black text-slate-900 tracking-tight">{stat.value}</h3>
-                          <span className={`text-[10px] font-black px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600`}>{stat.trend}</span>
-                       </div>
-                       <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mb-4">
-                          <motion.div 
-                             initial={{ width: 0 }} 
-                             animate={{ width: i === 0 ? '70%' : i === 1 ? '45%' : '24%' }}
-                             transition={{ duration: 1, delay: 0.5 }}
-                             className={`h-full bg-gradient-to-r ${stat.color} rounded-full`} 
-                          />
-                       </div>
-                       <p className="text-[10px] font-bold text-slate-300">{stat.sub}</p>
-                    </motion.div>
-                 ))}
-              </motion.div>
-           ) : activeTab === 'add-room' ? (
-              <motion.div 
-                 key="add-r"
-                 initial={{ opacity: 0, x: 20 }}
-                 animate={{ opacity: 1, x: 0 }}
-                 className="glass-card max-w-4xl p-10 border-white/60 shadow-2xl space-y-10"
-              >
-                 <div className="flex items-center gap-6 pb-6 border-b border-slate-100">
-                    <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-[1.5rem] text-indigo-600">
-                       <Bed className="w-8 h-8" />
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">Create Listing</h2>
-                        <p className="text-slate-400 font-bold">Define details for a new luxury room or estate.</p>
-                    </div>
-                 </div>
+        {activeTab === 'dashboard' && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="glass-card p-6">
+              <p className="text-xs font-black uppercase text-slate-400">Rooms</p>
+              <h3 className="text-3xl font-black text-slate-900">{rooms.length}</h3>
+            </div>
+            <div className="glass-card p-6">
+              <p className="text-xs font-black uppercase text-slate-400">Flights</p>
+              <h3 className="text-3xl font-black text-slate-900">{flights.length}</h3>
+            </div>
+            <div className="glass-card p-6">
+              <p className="text-xs font-black uppercase text-slate-400">Active Bookings</p>
+              <h3 className="text-3xl font-black text-slate-900">{activeBookingsCount}</h3>
+            </div>
+            <div className="glass-card p-6">
+              <p className="text-xs font-black uppercase text-slate-400">Cancelled</p>
+              <h3 className="text-3xl font-black text-slate-900">{cancelledBookingsCount}</h3>
+            </div>
+          </div>
+        )}
 
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
-                    <div className="relative">
-                       <input
-                         type="text"
-                         placeholder=" "
-                         value={roomForm.name}
-                         onChange={(e) => setRoomForm((prev) => ({ ...prev, name: e.target.value }))}
-                         className="peer w-full bg-slate-50/70 border-2 border-slate-100 rounded-2xl pt-7 pb-3 px-6 font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                       />
-                       <label className="absolute left-6 top-4 text-[11px] font-black uppercase tracking-widest text-slate-400 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal transition-all">Property Name</label>
-                    </div>
-                    <div className="relative">
-                       <input
-                         type="text"
-                         placeholder=" "
-                         value={roomForm.location}
-                         onChange={(e) => setRoomForm((prev) => ({ ...prev, location: e.target.value }))}
-                         className="peer w-full bg-slate-50/70 border-2 border-slate-100 rounded-2xl pt-7 pb-3 px-6 font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                       />
-                       <label className="absolute left-6 top-4 text-[11px] font-black uppercase tracking-widest text-slate-400 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal transition-all">Location</label>
-                    </div>
-                    <div className="relative">
-                       <input
-                         type="number"
-                         placeholder=" "
-                         value={roomForm.price}
-                         onChange={(e) => setRoomForm((prev) => ({ ...prev, price: e.target.value }))}
-                         className="peer w-full bg-slate-50/70 border-2 border-slate-100 rounded-2xl pt-7 pb-3 px-6 font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                       />
-                       <label className="absolute left-6 top-4 text-[11px] font-black uppercase tracking-widest text-slate-400 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal transition-all">Base Rate ($)</label>
-                    </div>
-                    <div className="relative">
-                       <select
-                         value={roomForm.available ? 'available' : 'unavailable'}
-                         onChange={(e) => setRoomForm((prev) => ({ ...prev, available: e.target.value === 'available' }))}
-                         className="w-full bg-slate-50/70 border-2 border-slate-100 rounded-2xl pt-7 pb-3 px-6 font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition-all appearance-none cursor-pointer"
-                       >
-                          <option value="available">Available</option>
-                          <option value="unavailable">Unavailable</option>
-                       </select>
-                       <label className="absolute left-6 top-4 text-[11px] font-black uppercase tracking-widest text-slate-400">Availability</label>
-                    </div>
-                    <div className="md:col-span-2 relative">
-                        <textarea placeholder=" " rows={4} className="peer w-full bg-slate-50/70 border-2 border-slate-100 rounded-[2rem] pt-8 pb-4 px-8 font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition-all resize-none"></textarea>
-                        <label className="absolute left-8 top-5 text-[11px] font-black uppercase tracking-widest text-slate-400 peer-placeholder-shown:top-8 peer-placeholder-shown:text-sm peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal transition-all">Description</label>
-                    </div>
-                 </div>
+        {activeTab === 'add-room' && (
+          <div className="glass-card p-8 space-y-5">
+            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3"><Bed className="w-6 h-6 text-indigo-600" />Add Room</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input value={roomForm.name} onChange={(e) => setRoomForm((p) => ({ ...p, name: e.target.value }))} placeholder="Hotel name" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={roomForm.imageUrl} onChange={(e) => setRoomForm((p) => ({ ...p, imageUrl: e.target.value }))} placeholder="Room image URL" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={roomForm.location} onChange={(e) => setRoomForm((p) => ({ ...p, location: e.target.value }))} placeholder="Location" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={roomForm.roomType} onChange={(e) => setRoomForm((p) => ({ ...p, roomType: e.target.value }))} placeholder="Room type (2 sharing, 3 sharing)" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input type="number" value={roomForm.price} onChange={(e) => setRoomForm((p) => ({ ...p, price: e.target.value }))} placeholder="Fare / price" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <select value={roomForm.available ? 'available' : 'unavailable'} onChange={(e) => setRoomForm((p) => ({ ...p, available: e.target.value === 'available' }))} className="rounded-xl border border-slate-200 px-4 py-3 font-semibold">
+                <option value="available">Available</option>
+                <option value="unavailable">Unavailable</option>
+              </select>
+            </div>
+            <textarea value={roomForm.description} onChange={(e) => setRoomForm((p) => ({ ...p, description: e.target.value }))} placeholder="Description" rows={4} className="w-full rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+            <button onClick={() => void handleCreateRoom()} disabled={isSubmitting} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black inline-flex items-center gap-2 disabled:opacity-60">
+              <span>{isSubmitting ? 'Saving...' : 'Create Room'}</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
-                 <div className="flex items-center gap-4 pt-6">
-                    <button
-                       onClick={() => void handlePublishRoom()}
-                       disabled={isPublishingRoom}
-                       className="flex-1 bg-slate-900 text-white py-6 rounded-[2rem] font-black text-lg shadow-xl shadow-slate-200 transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 disabled:opacity-60"
-                    >
-                       <span>{isPublishingRoom ? 'Publishing...' : 'Publish Listing'}</span>
-                       <ChevronRight className="w-6 h-6" />
-                    </button>
-                    <button className="px-10 py-6 bg-slate-100 text-slate-500 rounded-[2rem] font-black transition-all hover:bg-slate-200">Draft</button>
-                 </div>
-              </motion.div>
-                ) : activeTab === 'add-flight' ? (
-                   <motion.div
-                      key="add-f"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="glass-card max-w-4xl p-10 border-white/60 shadow-2xl space-y-10"
-                   >
-                      <div className="flex items-center gap-6 pb-6 border-b border-slate-100">
-                         <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-[1.5rem] text-indigo-600">
-                            <Plane className="w-8 h-8" />
-                         </div>
-                         <div>
-                            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Create Flight</h2>
-                            <p className="text-slate-400 font-bold">Add a new flight route and fare details.</p>
-                         </div>
-                      </div>
+        {activeTab === 'add-flight' && (
+          <div className="glass-card p-8 space-y-5">
+            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3"><Plane className="w-6 h-6 text-indigo-600" />Add Flight</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input value={flightForm.flightName} onChange={(e) => setFlightForm((p) => ({ ...p, flightName: e.target.value }))} placeholder="Flight name" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={flightForm.source} onChange={(e) => setFlightForm((p) => ({ ...p, source: e.target.value }))} placeholder="Source" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={flightForm.destination} onChange={(e) => setFlightForm((p) => ({ ...p, destination: e.target.value }))} placeholder="Destination" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input type="datetime-local" value={flightForm.departureTime} onChange={(e) => setFlightForm((p) => ({ ...p, departureTime: e.target.value }))} className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input type="datetime-local" value={flightForm.arrivalTime} onChange={(e) => setFlightForm((p) => ({ ...p, arrivalTime: e.target.value }))} className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={flightForm.imageUrl} onChange={(e) => setFlightForm((p) => ({ ...p, imageUrl: e.target.value }))} placeholder="Flight image URL" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input type="number" value={flightForm.fare} onChange={(e) => setFlightForm((p) => ({ ...p, fare: e.target.value }))} placeholder="Fare" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={flightForm.cabinClass} onChange={(e) => setFlightForm((p) => ({ ...p, cabinClass: e.target.value }))} placeholder="Cabin class" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+            </div>
+            <button onClick={() => void handleCreateFlight()} disabled={isSubmitting} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-black inline-flex items-center gap-2 disabled:opacity-60">
+              <span>{isSubmitting ? 'Saving...' : 'Create Flight'}</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
-                         <div className="relative">
-                            <input
-                              type="text"
-                              placeholder=" "
-                              value={flightForm.source}
-                              onChange={(e) => setFlightForm((prev) => ({ ...prev, source: e.target.value }))}
-                              className="peer w-full bg-slate-50/70 border-2 border-slate-100 rounded-2xl pt-7 pb-3 px-6 font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                            />
-                            <label className="absolute left-6 top-4 text-[11px] font-black uppercase tracking-widest text-slate-400 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal transition-all">Source</label>
-                         </div>
-                         <div className="relative">
-                            <input
-                              type="datetime-local"
-                              placeholder=" "
-                              value={flightForm.date}
-                              onChange={(e) => setFlightForm((prev) => ({ ...prev, date: e.target.value }))}
-                              className="peer w-full bg-slate-50/70 border-2 border-slate-100 rounded-2xl pt-7 pb-3 px-6 font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                            />
-                            <label className="absolute left-6 top-4 text-[11px] font-black uppercase tracking-widest text-slate-400">Travel Date</label>
-                         </div>
-                         <div className="relative">
-                            <input
-                              type="text"
-                              placeholder=" "
-                              value={flightForm.destination}
-                              onChange={(e) => setFlightForm((prev) => ({ ...prev, destination: e.target.value }))}
-                              className="peer w-full bg-slate-50/70 border-2 border-slate-100 rounded-2xl pt-7 pb-3 px-6 font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                            />
-                            <label className="absolute left-6 top-4 text-[11px] font-black uppercase tracking-widest text-slate-400 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal transition-all">Destination</label>
-                         </div>
-                         <div className="relative">
-                            <input
-                              type="number"
-                              placeholder=" "
-                              value={flightForm.price}
-                              onChange={(e) => setFlightForm((prev) => ({ ...prev, price: e.target.value }))}
-                              className="peer w-full bg-slate-50/70 border-2 border-slate-100 rounded-2xl pt-7 pb-3 px-6 font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                            />
-                            <label className="absolute left-6 top-4 text-[11px] font-black uppercase tracking-widest text-slate-400 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:normal-case peer-placeholder-shown:tracking-normal transition-all">Fare ($)</label>
-                         </div>
-                         <div className="relative">
-                            <select className="w-full bg-slate-50/70 border-2 border-slate-100 rounded-2xl pt-7 pb-3 px-6 font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition-all appearance-none cursor-pointer">
-                               <option>Economy</option>
-                               <option>Business</option>
-                               <option>First</option>
-                            </select>
-                            <label className="absolute left-6 top-4 text-[11px] font-black uppercase tracking-widest text-slate-400">Cabin Class</label>
-                         </div>
-                      </div>
+        {activeTab === 'update-room' && (
+          <div className="glass-card p-8 space-y-5">
+            <h2 className="text-2xl font-black text-slate-900">Update Room</h2>
+            <select
+              value={selectedRoomId ?? ''}
+              onChange={(e) => setSelectedRoomId(e.target.value ? Number(e.target.value) : null)}
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 font-semibold"
+            >
+              <option value="">Select room</option>
+              {rooms.map((room) => (
+                <option key={room.id} value={room.id}>{room.name} ({room.location})</option>
+              ))}
+            </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input value={roomForm.name} onChange={(e) => setRoomForm((p) => ({ ...p, name: e.target.value }))} placeholder="Hotel name" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={roomForm.imageUrl} onChange={(e) => setRoomForm((p) => ({ ...p, imageUrl: e.target.value }))} placeholder="Room image URL" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={roomForm.location} onChange={(e) => setRoomForm((p) => ({ ...p, location: e.target.value }))} placeholder="Location" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={roomForm.roomType} onChange={(e) => setRoomForm((p) => ({ ...p, roomType: e.target.value }))} placeholder="Room type" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input type="number" value={roomForm.price} onChange={(e) => setRoomForm((p) => ({ ...p, price: e.target.value }))} placeholder="Fare / price" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <select value={roomForm.available ? 'available' : 'unavailable'} onChange={(e) => setRoomForm((p) => ({ ...p, available: e.target.value === 'available' }))} className="rounded-xl border border-slate-200 px-4 py-3 font-semibold">
+                <option value="available">Available</option>
+                <option value="unavailable">Unavailable</option>
+              </select>
+            </div>
+            <textarea value={roomForm.description} onChange={(e) => setRoomForm((p) => ({ ...p, description: e.target.value }))} placeholder="Description" rows={4} className="w-full rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+            <button onClick={() => void handleUpdateRoom()} disabled={isSubmitting} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black inline-flex items-center gap-2 disabled:opacity-60">
+              <span>{isSubmitting ? 'Updating...' : 'Update Room'}</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
-                      <div className="flex items-center gap-4 pt-6">
-                         <button
-                            onClick={() => void handlePublishFlight()}
-                            disabled={isPublishingFlight}
-                            className="flex-1 bg-indigo-600 text-white py-6 rounded-[2rem] font-black text-lg shadow-xl shadow-indigo-200 transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-3 disabled:opacity-60"
-                         >
-                            <span>{isPublishingFlight ? 'Publishing...' : 'Publish Flight'}</span>
-                            <ChevronRight className="w-6 h-6" />
-                         </button>
-                         <button className="px-10 py-6 bg-slate-100 text-slate-500 rounded-[2rem] font-black transition-all hover:bg-slate-200">Draft</button>
-                      </div>
-                   </motion.div>
-                ) : activeTab === 'bookings' ? (
-                   <motion.div
-                      key="bookings"
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="glass-card p-8 border-white/60 shadow-2xl"
-                   >
-                      <h2 className="text-2xl font-black text-slate-900 mb-6">Recent Bookings</h2>
-                      <div className="space-y-4">
-                         {adminBookings.length === 0 ? (
-                            <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-slate-400 font-bold text-center">No booking data available yet.</div>
-                         ) : (
-                            adminBookings.map((booking) => (
-                               <div key={booking.id} className="rounded-2xl border border-slate-100 bg-white/60 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                  <div>
-                                     <p className="text-[10px] uppercase tracking-widest font-black text-slate-400 mb-1">{booking.type}</p>
-                                     <h3 className="text-lg font-black text-slate-900">
-                                        Item #{booking.itemId}
-                                     </h3>
-                                     <p className="text-sm font-semibold text-slate-500">Booking ID: {booking.id} • User: {booking.userEmail}</p>
-                                  </div>
-                                  <div className="text-right">
-                                     <p className="text-sm font-bold text-slate-500">Status</p>
-                                     <span className={`inline-flex px-3 py-1 rounded-full text-xs font-black border uppercase ${booking.status === 'BOOKED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>{booking.status}</span>
-                                  </div>
-                               </div>
-                            ))
-                         )}
-                      </div>
-                   </motion.div>
-           ) : (
-             <motion.div 
-               key="other" 
-               initial={{ opacity: 0 }} 
-               animate={{ opacity: 1 }}
-               className="glass-card p-20 text-center border-dashed border-slate-200"
-             >
-                <h3 className="text-2xl font-black text-slate-200">Section placeholder for: {activeTab}</h3>
-             </motion.div>
-           )}
-        </AnimatePresence>
+        {activeTab === 'update-flight' && (
+          <div className="glass-card p-8 space-y-5">
+            <h2 className="text-2xl font-black text-slate-900">Update Flight</h2>
+            <select
+              value={selectedFlightId ?? ''}
+              onChange={(e) => setSelectedFlightId(e.target.value ? Number(e.target.value) : null)}
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 font-semibold"
+            >
+              <option value="">Select flight</option>
+              {flights.map((flight) => (
+                <option key={flight.id} value={flight.id}>{flight.flightName ?? `${flight.source} -> ${flight.destination}`}</option>
+              ))}
+            </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input value={flightForm.flightName} onChange={(e) => setFlightForm((p) => ({ ...p, flightName: e.target.value }))} placeholder="Flight name" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={flightForm.source} onChange={(e) => setFlightForm((p) => ({ ...p, source: e.target.value }))} placeholder="Source" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={flightForm.destination} onChange={(e) => setFlightForm((p) => ({ ...p, destination: e.target.value }))} placeholder="Destination" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input type="datetime-local" value={flightForm.departureTime} onChange={(e) => setFlightForm((p) => ({ ...p, departureTime: e.target.value }))} className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input type="datetime-local" value={flightForm.arrivalTime} onChange={(e) => setFlightForm((p) => ({ ...p, arrivalTime: e.target.value }))} className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={flightForm.imageUrl} onChange={(e) => setFlightForm((p) => ({ ...p, imageUrl: e.target.value }))} placeholder="Flight image URL" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input type="number" value={flightForm.fare} onChange={(e) => setFlightForm((p) => ({ ...p, fare: e.target.value }))} placeholder="Fare" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+              <input value={flightForm.cabinClass} onChange={(e) => setFlightForm((p) => ({ ...p, cabinClass: e.target.value }))} placeholder="Cabin class" className="rounded-xl border border-slate-200 px-4 py-3 font-semibold" />
+            </div>
+            <button onClick={() => void handleUpdateFlight()} disabled={isSubmitting} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black inline-flex items-center gap-2 disabled:opacity-60">
+              <span>{isSubmitting ? 'Updating...' : 'Update Flight'}</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'bookings' && (
+          <div className="glass-card p-8">
+            <h2 className="text-2xl font-black text-slate-900 mb-6">All Bookings</h2>
+            <div className="space-y-4">
+              {adminBookings.map((booking) => (
+                <div key={booking.id} className="rounded-2xl border border-slate-100 bg-white p-4 flex justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-400">{booking.type}</p>
+                    <p className="font-black text-slate-900">Booking #{booking.id} • Item #{booking.itemId}</p>
+                    <p className="text-sm text-slate-500 font-semibold">{booking.userEmail}</p>
+                  </div>
+                  <span className="text-xs font-black uppercase rounded-full px-3 py-2 bg-slate-100 text-slate-600 h-fit">{booking.status}</span>
+                </div>
+              ))}
+              {adminBookings.length === 0 && <p className="text-slate-500 font-semibold">No bookings found.</p>}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'users' && (
+          <div className="glass-card p-8">
+            <h2 className="text-2xl font-black text-slate-900 mb-6">User Management</h2>
+            <div className="space-y-4">
+              {adminUsers.map((entry) => (
+                <div key={entry.id} className="rounded-2xl border border-slate-100 bg-white p-4 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-400">{entry.role}</p>
+                    <h3 className="font-black text-slate-900">{entry.name}</h3>
+                    <p className="text-sm font-semibold text-slate-500">{entry.email}</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={entry.role === 'ADMIN' || deletingUserId === entry.id}
+                    onClick={() => void handleDeleteUser(entry.id)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-black uppercase tracking-wider text-red-600 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>{deletingUserId === entry.id ? 'Removing...' : 'Remove User'}</span>
+                  </button>
+                </div>
+              ))}
+              {adminUsers.length === 0 && <p className="text-slate-500 font-semibold">No users found.</p>}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

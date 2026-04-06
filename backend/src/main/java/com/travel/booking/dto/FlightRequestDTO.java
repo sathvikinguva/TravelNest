@@ -9,17 +9,37 @@ import java.time.LocalDateTime;
 public class FlightRequestDTO {
 
     @NotBlank
+    private String flightName;
+
+    @NotBlank
     private String source;
 
     @NotBlank
     private String destination;
 
     @NotNull
-    private LocalDateTime date;
+    private LocalDateTime departureTime;
+
+    @NotNull
+    private LocalDateTime arrivalTime;
+
+    @NotBlank
+    private String imageUrl;
+
+    @NotBlank
+    private String cabinClass;
 
     @NotNull
     @DecimalMin(value = "0.0", inclusive = true)
     private Double price;
+
+    public String getFlightName() {
+        return flightName;
+    }
+
+    public void setFlightName(String flightName) {
+        this.flightName = flightName;
+    }
 
     public String getSource() {
         return source;
@@ -37,12 +57,36 @@ public class FlightRequestDTO {
         this.destination = destination;
     }
 
-    public LocalDateTime getDate() {
-        return date;
+    public LocalDateTime getDepartureTime() {
+        return departureTime;
     }
 
-    public void setDate(LocalDateTime date) {
-        this.date = date;
+    public void setDepartureTime(LocalDateTime departureTime) {
+        this.departureTime = departureTime;
+    }
+
+    public LocalDateTime getArrivalTime() {
+        return arrivalTime;
+    }
+
+    public void setArrivalTime(LocalDateTime arrivalTime) {
+        this.arrivalTime = arrivalTime;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getCabinClass() {
+        return cabinClass;
+    }
+
+    public void setCabinClass(String cabinClass) {
+        this.cabinClass = cabinClass;
     }
 
     public Double getPrice() {

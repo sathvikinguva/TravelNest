@@ -36,7 +36,7 @@ const Navbar = () => {
             <Briefcase className="w-6 h-6 text-white" />
           </motion.div>
           <span className="font-bold text-2xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-            Wanderlust
+            TravelNest
           </span>
         </NavLink>
 

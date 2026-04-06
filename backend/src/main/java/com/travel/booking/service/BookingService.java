@@ -45,6 +45,16 @@ public class BookingService {
         booking.setType(request.getType());
         booking.setItemId(request.getItemId());
         booking.setStatus(BookingStatus.BOOKED);
+        booking.setTravelerName(request.getTravelerName().trim());
+        booking.setTravelerNotes(request.getTravelerNotes() == null ? null : request.getTravelerNotes().trim());
+        booking.setTravelDate(request.getTravelDate());
+        booking.setGuestCount(request.getGuestCount());
+        booking.setPaymentMethod(request.getPaymentMethod().trim().toUpperCase());
+        booking.setPaymentReference(request.getPaymentReference().trim());
+        booking.setBaseAmount(request.getBaseAmount());
+        booking.setTaxAmount(request.getTaxAmount());
+        booking.setTotalAmount(request.getTotalAmount());
+        booking.setCurrency(request.getCurrency().trim().toUpperCase());
 
         return toResponse(bookingRepository.save(booking));
     }
@@ -90,7 +100,17 @@ public class BookingService {
                 booking.getUser().getEmail(),
                 booking.getType().name(),
                 booking.getItemId(),
-                booking.getStatus().name()
+                booking.getStatus().name(),
+                booking.getTravelerName(),
+                booking.getTravelerNotes(),
+                booking.getTravelDate().toString(),
+                booking.getGuestCount(),
+                booking.getPaymentMethod(),
+                booking.getPaymentReference(),
+                booking.getBaseAmount().toPlainString(),
+                booking.getTaxAmount().toPlainString(),
+                booking.getTotalAmount().toPlainString(),
+                booking.getCurrency()
         );
     }
 }

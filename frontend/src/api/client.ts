@@ -1,4 +1,4 @@
-import type { ApiBooking, ApiFlight, ApiRoom, BookingType } from './types';
+import type { ApiAdminUser, ApiBooking, ApiFlight, ApiRoom, BookingType } from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 const TOKEN_STORAGE_KEY = 'travel.jwt';
@@ -80,6 +80,9 @@ export const getFlightById = (id: number) => request<ApiFlight>(`/api/flights/${
 export const createAdminRoom = (payload: {
   name: string;
   location: string;
+  imageUrl: string;
+  roomType: string;
+  description: string;
   price: number;
   available: boolean;
 }) =>
@@ -89,9 +92,13 @@ export const createAdminRoom = (payload: {
   });
 
 export const createAdminFlight = (payload: {
+  flightName: string;
   source: string;
   destination: string;
-  date: string;
+  departureTime: string;
+  arrivalTime: string;
+  imageUrl: string;
+  cabinClass: string;
   price: number;
 }) =>
   request<ApiFlight>('/api/admin/flights', {
@@ -99,9 +106,57 @@ export const createAdminFlight = (payload: {
     body: JSON.stringify(payload),
   });
 
+export const updateAdminRoom = (
+  id: number,
+  payload: {
+    name: string;
+    location: string;
+    imageUrl: string;
+    roomType: string;
+    description: string;
+    price: number;
+    available: boolean;
+  }
+) =>
+  request<ApiRoom>(`/api/admin/rooms/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+
+export const updateAdminFlight = (
+  id: number,
+  payload: {
+    flightName: string;
+    source: string;
+    destination: string;
+    departureTime: string;
+    arrivalTime: string;
+    imageUrl: string;
+    cabinClass: string;
+    price: number;
+  }
+) =>
+  request<ApiFlight>(`/api/admin/flights/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+
 export const getAdminBookings = () => request<ApiBooking[]>('/api/admin/bookings');
 
-export const createBooking = (payload: { type: BookingType; itemId: number }) =>
+export const createBooking = (payload: {
+  type: BookingType;
+  itemId: number;
+  travelerName: string;
+  travelerNotes: string;
+  travelDate: string;
+  guestCount: number;
+  paymentMethod: string;
+  paymentReference: string;
+  baseAmount: string;
+  taxAmount: string;
+  totalAmount: string;
+  currency: string;
+}) =>
   request<ApiBooking>('/api/bookings', {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -112,4 +167,11 @@ export const getMyBookings = () => request<ApiBooking[]>('/api/bookings/my');
 export const cancelMyBooking = (bookingId: number) =>
   request<ApiBooking>(`/api/bookings/${bookingId}/cancel`, {
     method: 'PUT',
+  });
+
+export const getAdminUsers = () => request<ApiAdminUser[]>('/api/admin/users');
+
+export const deleteAdminUser = (userId: number) =>
+  request<void>(`/api/admin/users/${userId}`, {
+    method: 'DELETE',
   });

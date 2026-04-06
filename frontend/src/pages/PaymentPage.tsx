@@ -21,6 +21,12 @@ const PaymentPage = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [item, setItem] = useState<ApiRoom | ApiFlight | null>(null);
   const [loading, setLoading] = useState(true);
+  const [travelerName, setTravelerName] = useState('');
+  const [travelerNotes, setTravelerNotes] = useState('');
+  const [travelDate, setTravelDate] = useState('');
+  const [guestCount, setGuestCount] = useState(1);
+  const [paymentMethod, setPaymentMethod] = useState('CARD');
+  const [paymentReference, setPaymentReference] = useState('');
 
   useEffect(() => {
     if (!state) {
@@ -46,7 +52,7 @@ const PaymentPage = () => {
     void loadItem();
   }, [showToast, state]);
 
-  const total = useMemo(() => (item ? item.price + 45 : 0), [item]);
+  const total = useMemo(() => (item ? item.price : 0), [item]);
 
   if (!state) {
     return <div className="p-20 text-center font-bold">Session expired. Please restart booking.</div>;
@@ -61,6 +67,19 @@ const PaymentPage = () => {
   }
 
   const handleConfirmBooking = async () => {
+    if (!travelerName.trim()) {
+      showToast('Traveler name is required.', 'error');
+      return;
+    }
+    if (!travelDate) {
+      showToast('Travel date is required.', 'error');
+      return;
+    }
+    if (!paymentReference.trim()) {
+      showToast('Payment reference is required.', 'error');
+      return;
+    }
+
     setConfirmOpen(false);
     setIsProcessing(true);
     showToast('Creating booking...', 'info');
@@ -69,6 +88,16 @@ const PaymentPage = () => {
       const booking = await createNewBooking({
         type: state.type,
         itemId: state.itemId,
+        travelerName: travelerName.trim(),
+        travelerNotes: travelerNotes.trim(),
+        travelDate,
+        guestCount,
+        paymentMethod,
+        paymentReference: paymentReference.trim(),
+        baseAmount: String(item.price),
+        taxAmount: '0',
+        totalAmount: String(total),
+        currency: 'USD',
       });
       showToast('Booking created successfully.', 'success');
       navigate('/success', { state: { bookingId: booking.id } });
@@ -99,11 +128,75 @@ const PaymentPage = () => {
           <div className="space-y-6">
             <div className="space-y-3">
               <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">Full Name</label>
-              <input type="text" placeholder="Your full name" className="w-full bg-slate-50/50 border-2 border-slate-100 rounded-2xl py-4 px-6 font-bold text-slate-700" />
+              <input
+                type="text"
+                placeholder="Your full name"
+                value={travelerName}
+                onChange={(event) => setTravelerName(event.target.value)}
+                className="w-full bg-slate-50/50 border-2 border-slate-100 rounded-2xl py-4 px-6 font-bold text-slate-700"
+              />
             </div>
             <div className="space-y-3">
               <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">Notes</label>
-              <input type="text" placeholder="Any special request" className="w-full bg-slate-50/50 border-2 border-slate-100 rounded-2xl py-4 px-6 font-bold text-slate-700" />
+              <input
+                type="text"
+                placeholder="Any special request"
+                value={travelerNotes}
+                onChange={(event) => setTravelerNotes(event.target.value)}
+                className="w-full bg-slate-50/50 border-2 border-slate-100 rounded-2xl py-4 px-6 font-bold text-slate-700"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">
+                Travel Date
+              </label>
+              <input
+                type="date"
+                value={travelDate}
+                onChange={(event) => setTravelDate(event.target.value)}
+                className="w-full bg-slate-50/50 border-2 border-slate-100 rounded-2xl py-4 px-6 font-bold text-slate-700"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">
+                Guests
+              </label>
+              <select
+                value={guestCount}
+                onChange={(event) => setGuestCount(Number(event.target.value))}
+                className="w-full bg-slate-50/50 border-2 border-slate-100 rounded-2xl py-4 px-6 font-bold text-slate-700"
+              >
+                <option value={1}>1 Adult</option>
+                <option value={2}>2 Adults</option>
+                <option value={3}>3 Adults</option>
+                <option value={4}>4 Adults</option>
+              </select>
+            </div>
+            <div className="space-y-3">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">
+                Payment Method
+              </label>
+              <select
+                value={paymentMethod}
+                onChange={(event) => setPaymentMethod(event.target.value)}
+                className="w-full bg-slate-50/50 border-2 border-slate-100 rounded-2xl py-4 px-6 font-bold text-slate-700"
+              >
+                <option value="CARD">Card</option>
+                <option value="UPI">UPI</option>
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+              </select>
+            </div>
+            <div className="space-y-3">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">
+                Payment Reference
+              </label>
+              <input
+                type="text"
+                placeholder="Last 4 digits or UPI ref"
+                value={paymentReference}
+                onChange={(event) => setPaymentReference(event.target.value)}
+                className="w-full bg-slate-50/50 border-2 border-slate-100 rounded-2xl py-4 px-6 font-bold text-slate-700"
+              />
             </div>
           </div>
         </motion.div>
@@ -128,11 +221,7 @@ const PaymentPage = () => {
                   <span>Fare / Rate</span>
                   <span className="text-white">${item.price}</span>
                 </div>
-                <div className="flex justify-between items-center text-slate-400 font-bold text-sm">
-                  <span>Taxes & Fees</span>
-                  <span className="text-white">$45</span>
-                </div>
-                <div className="h-[1px] bg-white/10 w-full my-6" />
+                <div className="h-px bg-white/10 w-full my-6" />
                 <div className="flex justify-between items-center text-white font-black text-2xl">
                   <span>Total</span>
                   <span className="text-indigo-400">${total}</span>
@@ -144,7 +233,7 @@ const PaymentPage = () => {
                   onClick={() => setConfirmOpen(true)}
                   disabled={isProcessing}
                   variant="ghost"
-                  className="w-full p-6 rounded-[2rem] font-black text-lg shadow-xl hover:shadow-2xl flex items-center justify-center gap-4 group disabled:opacity-75 disabled:cursor-not-allowed"
+                  className="w-full p-6 rounded-4xl font-black text-lg shadow-xl hover:shadow-2xl flex items-center justify-center gap-4 group disabled:opacity-75 disabled:cursor-not-allowed"
                 >
                   <AnimatePresence mode="wait">
                     {isProcessing ? (
@@ -165,7 +254,7 @@ const PaymentPage = () => {
           </motion.div>
 
           <div className="flex items-center gap-3 text-slate-400 font-bold text-xs p-6 bg-slate-50/50 rounded-2xl border border-slate-100">
-            <AlertCircle className="w-5 h-5 text-indigo-400 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 text-indigo-400 shrink-0" />
             <span>This confirmation creates a booking with status BOOKED in backend.</span>
           </div>
         </div>

@@ -11,15 +11,23 @@ export interface ApiRoom {
   id: number;
   name: string;
   location: string;
+  imageUrl: string;
+  roomType: string;
+  description: string;
   price: number;
   available: boolean;
 }
 
 export interface ApiFlight {
   id: number;
+  flightName: string;
   source: string;
   destination: string;
   date: string;
+  departureTime: string;
+  arrivalTime: string;
+  imageUrl: string;
+  cabinClass: string;
   price: number;
 }
 
@@ -33,4 +41,21 @@ export interface ApiBooking {
   type: BookingType;
   itemId: number;
   status: BookingStatus;
+  travelerName: string;
+  travelerNotes: string | null;
+  travelDate: string;
+  guestCount: number;
+  paymentMethod: string;
+  paymentReference: string;
+  baseAmount: string;
+  taxAmount: string;
+  totalAmount: string;
+  currency: string;
+}
+
+export interface ApiAdminUser {
+  id: number;
+  name: string;
+  email: string;
+  role: Role;
 }

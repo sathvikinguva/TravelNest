@@ -85,34 +85,34 @@ const HomePage = () => {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
       >
-        <div className="flex justify-between items-end mb-10">
+        <div className="mb-10">
           <div>
-            <h2 className="text-4xl font-extrabold text-slate-900 mb-4">Popular Destinations</h2>
-            <p className="text-slate-500 font-medium">Over 5,000 recommendations worldwide</p>
+            <h2 className="text-4xl font-extrabold text-slate-900 mb-4">Plan Your Next Journey</h2>
+            <p className="text-slate-500 font-medium">All inventory is loaded directly from your backend.</p>
           </div>
-          <button className="flex items-center gap-2 group text-indigo-600 font-bold bg-indigo-50 px-6 py-3 rounded-2xl transition-all hover:bg-indigo-100">
-            <span>View All</span>
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
-            { name: 'Island Paradise', img: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=80', location: 'Santorini, Greece' },
-            { name: 'Swiss Alps', img: 'https://images.unsplash.com/photo-1533587851505-d119e13fa0d7?auto=format&fit=crop&w=800&q=80', location: 'Zermatt, Switzerland' },
-            { name: 'Neon City', img: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=800&q=80', location: 'Shinjuku, Japan' }
+            { title: 'Explore Rooms', description: 'Browse available stays from your backend inventory.', action: 'Go to Rooms', to: '/rooms' },
+            { title: 'Search Flights', description: 'See live flight routes and pricing from backend.', action: 'Go to Flights', to: '/flights' },
+            { title: 'Track Bookings', description: 'Manage your live booking history and statuses.', action: 'Go to My Bookings', to: '/my-bookings' },
           ].map((item, i) => (
             <motion.div
               key={i}
               whileHover={{ y: -8 }}
-              className="group cursor-pointer relative aspect-[4/5] rounded-[2.5rem] overflow-hidden shadow-2xl shadow-indigo-100"
+              className="group cursor-pointer relative rounded-[2.5rem] overflow-hidden shadow-2xl shadow-indigo-100 border border-white/60 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900"
+              onClick={() => navigate(item.to)}
             >
-              <img src={item.img} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent flex flex-col justify-end p-8">
-                <p className="text-indigo-400 font-bold text-sm mb-2 uppercase tracking-widest">{item.location}</p>
-                <h3 className="text-3xl font-bold text-white mb-2">{item.name}</h3>
-                <div className="h-0 group-hover:h-8 transition-all overflow-hidden">
-                  <span className="text-slate-300 font-medium">Starting from $249</span>
+              <div className="p-8 md:p-10 min-h-[280px] flex flex-col justify-between">
+                <div>
+                  <p className="text-indigo-300 font-bold text-sm mb-3 uppercase tracking-widest">Live Data</p>
+                  <h3 className="text-3xl font-bold text-white mb-3">{item.title}</h3>
+                  <p className="text-slate-200 font-medium">{item.description}</p>
+                </div>
+                <div className="inline-flex items-center gap-2 text-white font-bold mt-8">
+                  <span>{item.action}</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
             </motion.div>

@@ -3,11 +3,26 @@ import { cancelMyBooking, createBooking, getMyBookings } from '../api/client';
 import type { ApiBooking, BookingType } from '../api/types';
 import { useAuth } from './AuthContext';
 
+interface CreateBookingPayload {
+  type: BookingType;
+  itemId: number;
+  travelerName: string;
+  travelerNotes: string;
+  travelDate: string;
+  guestCount: number;
+  paymentMethod: string;
+  paymentReference: string;
+  baseAmount: string;
+  taxAmount: string;
+  totalAmount: string;
+  currency: string;
+}
+
 interface BookingContextType {
   bookings: ApiBooking[];
   loading: boolean;
   refreshMyBookings: () => Promise<void>;
-  createNewBooking: (payload: { type: BookingType; itemId: number }) => Promise<ApiBooking>;
+  createNewBooking: (payload: CreateBookingPayload) => Promise<ApiBooking>;
   cancelBooking: (bookingId: number) => Promise<ApiBooking>;
 }
 
@@ -33,7 +48,7 @@ export const BookingProvider: React.FC<{ children: ReactNode }> = ({ children })
     }
   }, [token]);
 
-  const createNewBooking = useCallback(async (payload: { type: BookingType; itemId: number }) => {
+  const createNewBooking = useCallback(async (payload: CreateBookingPayload) => {
     const created = await createBooking(payload);
     setBookings((prev) => [created, ...prev]);
     return created;

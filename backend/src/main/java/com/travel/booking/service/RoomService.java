@@ -57,6 +57,9 @@ public class RoomService {
     private void mapRequestToEntity(RoomRequestDTO request, Room room) {
         room.setName(request.getName());
         room.setLocation(request.getLocation());
+        room.setImageUrl(request.getImageUrl());
+        room.setRoomType(request.getRoomType());
+        room.setDescription(request.getDescription());
         room.setPrice(request.getPrice());
         room.setAvailable(request.getAvailable());
     }
@@ -66,6 +69,9 @@ public class RoomService {
                 room.getId(),
                 room.getName(),
                 room.getLocation(),
+            room.getImageUrl(),
+            room.getRoomType(),
+            room.getDescription(),
                 room.getPrice(),
                 room.getAvailable()
         );

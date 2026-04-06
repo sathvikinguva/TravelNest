@@ -21,6 +21,15 @@ public class Room {
     @Column(nullable = false)
     private String location;
 
+    @Column
+    private String imageUrl;
+
+    @Column
+    private String roomType;
+
+    @Column(length = 2000)
+    private String description;
+
     @Column(nullable = false)
     private Double price;
 
@@ -49,6 +58,30 @@ public class Room {
 
     public void setLocation(String location) {
         this.location = location;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getRoomType() {
+        return roomType;
+    }
+
+    public void setRoomType(String roomType) {
+        this.roomType = roomType;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public Double getPrice() {

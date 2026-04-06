@@ -10,6 +10,9 @@ import { useToast } from '../hooks/useToast';
 
 const toTime = (value: string) => {
   const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '--:--';
+  }
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
@@ -20,7 +23,8 @@ const toDay = (value: string) => {
 
 const FlightCard = ({ flight, index }: { flight: ApiFlight; index: number }) => {
   const navigate = useNavigate();
-  const departureTime = toTime(flight.date);
+  const departureTime = toTime(flight.departureTime || flight.date);
+  const arrivalTime = toTime(flight.arrivalTime || flight.date);
 
   return (
     <motion.div
@@ -32,6 +36,17 @@ const FlightCard = ({ flight, index }: { flight: ApiFlight; index: number }) => 
       onClick={() => navigate(`/booking/${flight.id}?type=flight`)}
     >
       <Card className="w-full p-6 md:p-8 !rounded-2xl">
+        <div className="mb-5 overflow-hidden rounded-2xl border border-slate-100 h-48">
+          <img
+            src={flight.imageUrl || `https://picsum.photos/seed/flight-${flight.id}/1200/800`}
+            alt={`${flight.source} to ${flight.destination}`}
+            onError={(event) => {
+              event.currentTarget.src = `https://picsum.photos/seed/flight-fallback-${flight.id}/1200/800`;
+            }}
+            className="w-full h-full object-cover"
+          />
+        </div>
+
         <div className="absolute top-0 right-0 p-3 bg-indigo-50 border-bl border-indigo-100 rounded-bl-2xl">
           <ShieldCheck className="w-5 h-5 text-indigo-500" />
         </div>
@@ -40,7 +55,7 @@ const FlightCard = ({ flight, index }: { flight: ApiFlight; index: number }) => 
           <div className="p-4 bg-slate-900 rounded-3xl mb-4 group-hover:rotate-12 transition-transform shadow-lg shadow-slate-200">
             <Plane className="w-8 h-8 text-white" />
           </div>
-          <h3 className="text-xl font-black text-slate-800 tracking-tight">SkyWay</h3>
+          <h3 className="text-xl font-black text-slate-800 tracking-tight">{flight.flightName || 'SkyWay'}</h3>
           <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">FL-{flight.id}</span>
         </div>
 
@@ -73,7 +88,7 @@ const FlightCard = ({ flight, index }: { flight: ApiFlight; index: number }) => 
               <PlaneLanding className="w-4 h-4 text-purple-400" />
               <span>Arrival</span>
             </div>
-            <span className="text-3xl font-black text-slate-900 mb-1">{departureTime}</span>
+            <span className="text-3xl font-black text-slate-900 mb-1">{arrivalTime}</span>
             <span className="text-sm font-bold text-slate-500">{flight.destination}</span>
           </div>
         </div>
@@ -81,7 +96,7 @@ const FlightCard = ({ flight, index }: { flight: ApiFlight; index: number }) => 
         <div className="min-w-[180px] flex flex-col items-center md:items-end justify-center border-l md:border-l border-slate-100 pl-0 md:pl-8 gap-4">
           <div className="text-right flex flex-col items-center md:items-end">
             <span className="text-3xl font-black text-indigo-600">${flight.price}</span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">All inclusive</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">{flight.cabinClass || 'Economy'}</span>
           </div>
 
           <motion.button
