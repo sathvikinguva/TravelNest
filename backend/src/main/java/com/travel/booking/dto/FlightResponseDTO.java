@@ -1,5 +1,6 @@
 package com.travel.booking.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 
 public class FlightResponseDTO {
@@ -8,8 +9,11 @@ public class FlightResponseDTO {
     private String flightName;
     private String source;
     private String destination;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime date;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime departureTime;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime arrivalTime;
     private String imageUrl;
     private String cabinClass;

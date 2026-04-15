@@ -14,6 +14,8 @@ public class BookingResponseDTO {
     private Integer guestCount;
     private String paymentMethod;
     private String paymentReference;
+    private String cardLast4;
+    private String upiId;
     private String baseAmount;
     private String taxAmount;
     private String totalAmount;
@@ -32,6 +34,8 @@ public class BookingResponseDTO {
             Integer guestCount,
             String paymentMethod,
             String paymentReference,
+            String cardLast4,
+            String upiId,
             String baseAmount,
             String taxAmount,
             String totalAmount,
@@ -49,6 +53,8 @@ public class BookingResponseDTO {
         this.guestCount = guestCount;
         this.paymentMethod = paymentMethod;
         this.paymentReference = paymentReference;
+        this.cardLast4 = cardLast4;
+        this.upiId = upiId;
         this.baseAmount = baseAmount;
         this.taxAmount = taxAmount;
         this.totalAmount = totalAmount;
@@ -101,6 +107,14 @@ public class BookingResponseDTO {
 
     public String getPaymentReference() {
         return paymentReference;
+    }
+
+    public String getCardLast4() {
+        return cardLast4;
+    }
+
+    public String getUpiId() {
+        return upiId;
     }
 
     public String getBaseAmount() {

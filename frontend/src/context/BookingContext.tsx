@@ -12,6 +12,8 @@ interface CreateBookingPayload {
   guestCount: number;
   paymentMethod: string;
   paymentReference: string;
+  cardLast4: string;
+  upiId: string;
   baseAmount: string;
   taxAmount: string;
   totalAmount: string;

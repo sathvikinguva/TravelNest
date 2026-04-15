@@ -35,7 +35,7 @@ const FlightCard = ({ flight, index }: { flight: ApiFlight; index: number }) => 
       className="p-6 md:p-8 border border-white/60 ring-1 ring-slate-100/50 mb-6 flex flex-col md:flex-row items-center gap-8 relative hover:shadow-2xl hover:shadow-indigo-100 group overflow-hidden"
       onClick={() => navigate(`/booking/${flight.id}?type=flight`)}
     >
-      <Card className="w-full p-6 md:p-8 !rounded-2xl">
+      <Card className="w-full p-6 md:p-8 rounded-2xl!">
         <div className="mb-5 overflow-hidden rounded-2xl border border-slate-100 h-48">
           <img
             src={flight.imageUrl || `https://picsum.photos/seed/flight-${flight.id}/1200/800`}
@@ -51,7 +51,7 @@ const FlightCard = ({ flight, index }: { flight: ApiFlight; index: number }) => 
           <ShieldCheck className="w-5 h-5 text-indigo-500" />
         </div>
 
-        <div className="flex flex-col items-center md:items-start min-w-[150px]">
+        <div className="flex flex-col items-center md:items-start min-w-37.5">
           <div className="p-4 bg-slate-900 rounded-3xl mb-4 group-hover:rotate-12 transition-transform shadow-lg shadow-slate-200">
             <Plane className="w-8 h-8 text-white" />
           </div>
@@ -71,11 +71,11 @@ const FlightCard = ({ flight, index }: { flight: ApiFlight; index: number }) => 
 
           <div className="flex flex-col items-center relative gap-2">
             <div className="w-full flex items-center gap-3">
-              <div className="h-[2px] flex-1 bg-gradient-to-r from-transparent via-slate-200 to-slate-200" />
+              <div className="h-0.5 flex-1 bg-linear-to-r from-transparent via-slate-200 to-slate-200" />
               <motion.div animate={{ x: [0, 5, 0] }} transition={{ repeat: Infinity, duration: 2 }} className="p-1 px-3 bg-indigo-50 rounded-full border border-indigo-100">
                 <Plane className="w-4 h-4 text-indigo-600 rotate-90" />
               </motion.div>
-              <div className="h-[2px] flex-1 bg-gradient-to-r from-slate-200 via-slate-200 to-transparent" />
+              <div className="h-0.5 flex-1 bg-linear-to-r from-slate-200 via-slate-200 to-transparent" />
             </div>
             <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100/50 px-3 py-1 rounded-full border border-slate-200 shadow-sm">
               <Clock className="w-3 h-3 text-indigo-500" />
@@ -93,7 +93,7 @@ const FlightCard = ({ flight, index }: { flight: ApiFlight; index: number }) => 
           </div>
         </div>
 
-        <div className="min-w-[180px] flex flex-col items-center md:items-end justify-center border-l md:border-l border-slate-100 pl-0 md:pl-8 gap-4">
+        <div className="min-w-45 flex flex-col items-center md:items-end justify-center border-l md:border-l border-slate-100 pl-0 md:pl-8 gap-4">
           <div className="text-right flex flex-col items-center md:items-end">
             <span className="text-3xl font-black text-indigo-600">${flight.price}</span>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">{flight.cabinClass || 'Economy'}</span>
@@ -116,6 +116,8 @@ const FlightCard = ({ flight, index }: { flight: ApiFlight; index: number }) => 
 const FlightsPage = () => {
   const [loading, setLoading] = useState(true);
   const [flights, setFlights] = useState<ApiFlight[]>([]);
+  const [search, setSearch] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('all');
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -134,6 +136,19 @@ const FlightsPage = () => {
     void loadFlights();
   }, [showToast]);
 
+  const sources = Array.from(new Set(flights.map((flight) => flight.source))).sort();
+
+  const filteredFlights = flights.filter((flight) => {
+    const matchSearch = [flight.flightName, flight.source, flight.destination, flight.cabinClass]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(search.trim().toLowerCase());
+
+    const matchSource = sourceFilter === 'all' || flight.source === sourceFilter;
+    return matchSearch && matchSource;
+  });
+
   return (
     <div className="py-12">
       <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -148,7 +163,29 @@ const FlightsPage = () => {
 
         <div className="flex items-center gap-3 bg-white/50 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/60 shadow-sm">
           <Calendar className="w-5 h-5 text-indigo-500" />
-          <span className="text-sm font-bold text-slate-700">Live from backend inventory</span>
+          <span className="text-sm font-bold text-slate-700">Backend powered listing</span>
+        </div>
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search flights"
+          className="rounded-xl border border-slate-200 px-4 py-3 font-semibold"
+        />
+        <select
+          value={sourceFilter}
+          onChange={(event) => setSourceFilter(event.target.value)}
+          className="rounded-xl border border-slate-200 px-4 py-3 font-semibold"
+        >
+          <option value="all">All sources</option>
+          {sources.map((source) => (
+            <option key={source} value={source}>{source}</option>
+          ))}
+        </select>
+        <div className="rounded-xl border border-slate-200 px-4 py-3 font-semibold text-slate-500">
+          {filteredFlights.length} flights found
         </div>
       </div>
 
@@ -164,7 +201,7 @@ const FlightsPage = () => {
         </div>
       ) : (
         <div className="flex flex-col gap-4 mb-20 px-1">
-          {flights.map((flight, index) => (
+          {filteredFlights.map((flight, index) => (
             <FlightCard key={flight.id} flight={flight} index={index} />
           ))}
         </div>

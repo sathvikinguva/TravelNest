@@ -22,6 +22,9 @@ const BookingPage = () => {
   const [flight, setFlight] = useState<ApiFlight | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState(1);
+  const [contactName, setContactName] = useState('');
+  const [travelDate, setTravelDate] = useState('');
+  const [guestCount, setGuestCount] = useState('1');
 
   const numericId = Number(id);
 
@@ -71,8 +74,40 @@ const BookingPage = () => {
   const locationLine = type === 'room' ? room?.location : `${flight?.source} → ${flight?.destination}`;
   const amount = (item as ApiRoom | ApiFlight).price;
 
+  const isAlphabetName = (value: string) => /^[A-Za-z ]+$/.test(value.trim());
+
+  const validateStepOne = () => {
+    if (!contactName.trim() || !isAlphabetName(contactName)) {
+      showToast('Contact name must contain alphabets only.', 'error');
+      return false;
+    }
+
+    if (!travelDate) {
+      showToast('Please select a travel date.', 'error');
+      return false;
+    }
+
+    const selectedDate = new Date(`${travelDate}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (selectedDate < today) {
+      showToast('Past dates are not allowed.', 'error');
+      return false;
+    }
+
+    if (!/^\d+$/.test(guestCount) || Number(guestCount) < 1 || Number(guestCount) > 4) {
+      showToast('Guest/passenger count must be between 1 and 4.', 'error');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleProceed = () => {
     if (step === 1) {
+      if (!validateStepOne()) {
+        return;
+      }
       setStep(2);
       return;
     }
@@ -81,6 +116,9 @@ const BookingPage = () => {
       state: {
         itemId: numericId,
         type: type === 'room' ? 'ROOM' : 'FLIGHT',
+        travelerName: contactName.trim(),
+        travelDate,
+        guestCount: Number(guestCount),
       },
     });
   };
@@ -94,7 +132,7 @@ const BookingPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-8">
-          <div className="relative aspect-[16/10] rounded-[3rem] overflow-hidden shadow-2xl shadow-indigo-100 ring-1 ring-slate-100/50">
+          <div className="relative aspect-16/10 rounded-[3rem] overflow-hidden shadow-2xl shadow-indigo-100 ring-1 ring-slate-100/50">
             <img
               src={type === 'room' ? (room?.imageUrl || getRoomImageById(numericId)) : (flight?.imageUrl || flightHero)}
               alt=""
@@ -103,7 +141,7 @@ const BookingPage = () => {
               }}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/20 via-transparent to-transparent" />
           </div>
 
           <div className="glass-card p-8 border border-white/60">
@@ -129,7 +167,7 @@ const BookingPage = () => {
             </div>
 
             <p className="text-slate-500 font-medium leading-relaxed">
-              Live availability and pricing synced from your backend API.
+              Complete details below to continue with booking.
             </p>
           </div>
         </motion.div>
@@ -157,7 +195,13 @@ const BookingPage = () => {
                 <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
                   <div className="space-y-4">
                     <label className="block text-sm font-black text-slate-400 uppercase tracking-widest pl-1">Contact Name</label>
-                    <input type="text" placeholder="John Doe" className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 px-6 font-bold text-slate-700" />
+                    <input
+                      type="text"
+                      placeholder="John Doe"
+                      value={contactName}
+                      onChange={(event) => setContactName(event.target.value.replace(/[^A-Za-z ]/g, ''))}
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 px-6 font-bold text-slate-700"
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-6">
@@ -167,7 +211,13 @@ const BookingPage = () => {
                       </label>
                       <div className="relative">
                         <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                        <input type="date" className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-6 font-bold text-slate-700" />
+                        <input
+                          type="date"
+                          value={travelDate}
+                          min={new Date().toISOString().split('T')[0]}
+                          onChange={(event) => setTravelDate(event.target.value)}
+                          className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-6 font-bold text-slate-700"
+                        />
                       </div>
                     </div>
                     <div className="space-y-4">
@@ -176,10 +226,15 @@ const BookingPage = () => {
                       </label>
                       <div className="relative">
                         <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                        <select className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-6 font-bold text-slate-700 appearance-none">
-                          <option>1 Adult</option>
-                          <option>2 Adults</option>
-                          <option>3 Adults</option>
+                        <select
+                          value={guestCount}
+                          onChange={(event) => setGuestCount(event.target.value)}
+                          className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl py-4 pl-12 pr-6 font-bold text-slate-700"
+                        >
+                          <option value="1">1</option>
+                          <option value="2">2</option>
+                          <option value="3">3</option>
+                          <option value="4">4</option>
                         </select>
                       </div>
                     </div>
@@ -205,8 +260,8 @@ const BookingPage = () => {
                   </div>
 
                   <div className="flex items-center gap-4 text-xs font-bold text-indigo-600 bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
-                    <ShieldCheck className="w-6 h-6 flex-shrink-0" />
-                    <span>Your booking request will be created through backend API.</span>
+                    <ShieldCheck className="w-6 h-6 shrink-0" />
+                    <span>Please verify details before moving to payment.</span>
                   </div>
                 </motion.div>
               )}

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Star, Heart, ArrowRight } from 'lucide-react';
+import { MapPin, Star, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Skeleton from '../components/Skeleton';
 import Card from '../components/Card';
-import { getRooms } from '../api/client';
-import type { ApiRoom } from '../api/types';
+import { getRoomRatingsSummary, getRooms } from '../api/client';
+import type { ApiRoom, ApiRoomRatingSummary } from '../api/types';
 import { useToast } from '../hooks/useToast';
 import { getRoomImageById } from '../data/roomImages';
 
@@ -14,7 +14,7 @@ const ratingById = (id: number) => {
   return ratings[id % ratings.length];
 };
 
-const RoomCard = ({ room, index }: { room: ApiRoom; index: number }) => {
+const RoomCard = ({ room, index, rating }: { room: ApiRoom; index: number; rating?: ApiRoomRatingSummary }) => {
   const navigate = useNavigate();
 
   return (
@@ -26,8 +26,8 @@ const RoomCard = ({ room, index }: { room: ApiRoom; index: number }) => {
       className="overflow-hidden group border border-white/40 ring-1 ring-slate-100/50 flex flex-col h-full active:scale-[0.98] cursor-pointer"
       onClick={() => navigate(`/booking/${room.id}?type=room`)}
     >
-      <Card className="h-full overflow-hidden !rounded-2xl">
-        <div className="relative aspect-[4/3] overflow-hidden">
+      <Card className="h-full overflow-hidden rounded-2xl!">
+        <div className="relative aspect-4/3 overflow-hidden">
           <img
             src={room.imageUrl || getRoomImageById(room.id)}
             alt={room.name}
@@ -36,18 +36,9 @@ const RoomCard = ({ room, index }: { room: ApiRoom; index: number }) => {
             }}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-115"
           />
-          <div className="absolute top-4 right-4 flex flex-col gap-2">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              className="p-2.5 bg-white/60 backdrop-blur-md rounded-2xl text-slate-900 border border-white/40 hover:bg-white transition-colors"
-            >
-              <Heart className="w-5 h-5 group-hover:fill-red-500 transition-colors" />
-            </motion.button>
-          </div>
           <div className="absolute bottom-4 left-4 bg-slate-900/40 backdrop-blur-md text-white px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-bold border border-white/10">
             <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-            <span>{ratingById(room.id)}</span>
+            <span>{rating ? rating.averageRating.toFixed(1) : ratingById(room.id)}</span>
           </div>
         </div>
 
@@ -96,14 +87,18 @@ const RoomCard = ({ room, index }: { room: ApiRoom; index: number }) => {
 const RoomsPage = () => {
   const [loading, setLoading] = useState(true);
   const [rooms, setRooms] = useState<ApiRoom[]>([]);
+  const [ratings, setRatings] = useState<ApiRoomRatingSummary[]>([]);
+  const [search, setSearch] = useState('');
+  const [locationFilter, setLocationFilter] = useState('all');
   const { showToast } = useToast();
 
   useEffect(() => {
     const loadRooms = async () => {
       setLoading(true);
       try {
-        const data = await getRooms();
-        setRooms(data);
+        const [roomsData, ratingsData] = await Promise.all([getRooms(), getRoomRatingsSummary()]);
+        setRooms(roomsData);
+        setRatings(ratingsData);
       } catch {
         showToast('Unable to load rooms from backend.', 'error');
       } finally {
@@ -114,6 +109,21 @@ const RoomsPage = () => {
     void loadRooms();
   }, [showToast]);
 
+  const locations = Array.from(new Set(rooms.map((room) => room.location))).sort();
+
+  const filteredRooms = rooms.filter((room) => {
+    const matchSearch = [room.name, room.location, room.roomType, room.description]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(search.trim().toLowerCase());
+
+    const matchLocation = locationFilter === 'all' || room.location === locationFilter;
+    return matchSearch && matchLocation;
+  });
+
+  const ratingByRoomId = new Map(ratings.map((entry) => [entry.roomId, entry]));
+
   return (
     <div className="py-12">
       <div className="mb-12">
@@ -123,6 +133,28 @@ const RoomsPage = () => {
         <motion.p className="text-slate-500 font-medium" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
           Discover unique spaces that feel like home, only better.
         </motion.p>
+
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search rooms"
+            className="rounded-xl border border-slate-200 px-4 py-3 font-semibold"
+          />
+          <select
+            value={locationFilter}
+            onChange={(event) => setLocationFilter(event.target.value)}
+            className="rounded-xl border border-slate-200 px-4 py-3 font-semibold"
+          >
+            <option value="all">All locations</option>
+            {locations.map((location) => (
+              <option key={location} value={location}>{location}</option>
+            ))}
+          </select>
+          <div className="rounded-xl border border-slate-200 px-4 py-3 font-semibold text-slate-500">
+            {filteredRooms.length} rooms found
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -138,8 +170,8 @@ const RoomsPage = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-20 px-1">
-          {rooms.map((room, index) => (
-            <RoomCard key={room.id} room={room} index={index} />
+          {filteredRooms.map((room, index) => (
+            <RoomCard key={room.id} room={room} index={index} rating={ratingByRoomId.get(room.id)} />
           ))}
         </div>
       )}

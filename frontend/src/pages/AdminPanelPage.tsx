@@ -17,13 +17,24 @@ import {
   createAdminRoom,
   deleteAdminUser,
   getAdminBookings,
+  getAdminFlightPayments,
+  getAdminRoomPayments,
+  getAdminRoomRatings,
   getAdminUsers,
   getFlights,
   getRooms,
   updateAdminFlight,
   updateAdminRoom,
 } from '../api/client';
-import type { ApiAdminUser, ApiBooking, ApiFlight, ApiRoom } from '../api/types';
+import type {
+  ApiAdminUser,
+  ApiBooking,
+  ApiFlight,
+  ApiFlightPayment,
+  ApiRoom,
+  ApiRoomPayment,
+  ApiRoomRating,
+} from '../api/types';
 import { useToast } from '../hooks/useToast';
 
 const toLocalDateTimeInput = (value: string | undefined) => {
@@ -48,6 +59,9 @@ const AdminPanelPage = () => {
   const [adminUsers, setAdminUsers] = useState<ApiAdminUser[]>([]);
   const [rooms, setRooms] = useState<ApiRoom[]>([]);
   const [flights, setFlights] = useState<ApiFlight[]>([]);
+  const [roomRatings, setRoomRatings] = useState<ApiRoomRating[]>([]);
+  const [roomPayments, setRoomPayments] = useState<ApiRoomPayment[]>([]);
+  const [flightPayments, setFlightPayments] = useState<ApiFlightPayment[]>([]);
 
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -97,10 +111,18 @@ const AdminPanelPage = () => {
           getRooms(),
           getFlights(),
         ]);
+        const [ratingsData, roomPaymentsData, flightPaymentsData] = await Promise.all([
+          getAdminRoomRatings(),
+          getAdminRoomPayments(),
+          getAdminFlightPayments(),
+        ]);
         setAdminBookings(bookingsData);
         setAdminUsers(usersData);
         setRooms(roomsData);
         setFlights(flightsData);
+        setRoomRatings(ratingsData);
+        setRoomPayments(roomPaymentsData);
+        setFlightPayments(flightPaymentsData);
       } catch {
         showToast('Unable to load admin data.', 'error');
       }
@@ -151,6 +173,22 @@ const AdminPanelPage = () => {
 
   const activeBookingsCount = adminBookings.filter((booking) => booking.status === 'BOOKED').length;
   const cancelledBookingsCount = adminBookings.filter((booking) => booking.status === 'CANCELLED').length;
+  const roomRatingsCount = roomRatings.length;
+  const avgRoomRating = roomRatingsCount
+    ? roomRatings.reduce((sum, rating) => sum + rating.rating, 0) / roomRatingsCount
+    : 0;
+
+  const dashboardMetrics = [
+    { label: 'Rooms', value: rooms.length, accent: 'from-indigo-500 to-indigo-600' },
+    { label: 'Flights', value: flights.length, accent: 'from-sky-500 to-sky-600' },
+    { label: 'Bookings', value: adminBookings.length, accent: 'from-emerald-500 to-emerald-600' },
+    { label: 'Ratings', value: roomRatingsCount, accent: 'from-amber-500 to-amber-600' },
+  ];
+
+  const dashboardBars = dashboardMetrics
+    .map((metric) => ({ ...metric, percent: Math.max(metric.value, 1) }))
+    .sort((left, right) => right.percent - left.percent);
+  const chartMax = Math.max(...dashboardBars.map((bar) => bar.percent), 1);
 
   const resetRoomForm = () => {
     setRoomForm({
@@ -331,6 +369,9 @@ const AdminPanelPage = () => {
     { id: 'add-flight', name: 'Add Flight', icon: PlusCircle },
     { id: 'update-room', name: 'Update Room', icon: PencilLine },
     { id: 'update-flight', name: 'Update Flight', icon: PencilLine },
+    { id: 'room-ratings', name: 'Room Ratings', icon: History },
+    { id: 'room-payments', name: 'Room Payments', icon: History },
+    { id: 'flight-payments', name: 'Flight Payments', icon: History },
     { id: 'bookings', name: 'View Bookings', icon: History },
     { id: 'users', name: 'User Management', icon: Users },
   ];
@@ -362,22 +403,89 @@ const AdminPanelPage = () => {
         </header>
 
         {activeTab === 'dashboard' && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="glass-card p-6">
-              <p className="text-xs font-black uppercase text-slate-400">Rooms</p>
-              <h3 className="text-3xl font-black text-slate-900">{rooms.length}</h3>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="glass-card p-6">
+                <p className="text-xs font-black uppercase text-slate-400">Rooms</p>
+                <h3 className="text-3xl font-black text-slate-900">{rooms.length}</h3>
+              </div>
+              <div className="glass-card p-6">
+                <p className="text-xs font-black uppercase text-slate-400">Flights</p>
+                <h3 className="text-3xl font-black text-slate-900">{flights.length}</h3>
+              </div>
+              <div className="glass-card p-6">
+                <p className="text-xs font-black uppercase text-slate-400">Active Bookings</p>
+                <h3 className="text-3xl font-black text-slate-900">{activeBookingsCount}</h3>
+              </div>
+              <div className="glass-card p-6">
+                <p className="text-xs font-black uppercase text-slate-400">Cancelled</p>
+                <h3 className="text-3xl font-black text-slate-900">{cancelledBookingsCount}</h3>
+              </div>
             </div>
-            <div className="glass-card p-6">
-              <p className="text-xs font-black uppercase text-slate-400">Flights</p>
-              <h3 className="text-3xl font-black text-slate-900">{flights.length}</h3>
-            </div>
-            <div className="glass-card p-6">
-              <p className="text-xs font-black uppercase text-slate-400">Active Bookings</p>
-              <h3 className="text-3xl font-black text-slate-900">{activeBookingsCount}</h3>
-            </div>
-            <div className="glass-card p-6">
-              <p className="text-xs font-black uppercase text-slate-400">Cancelled</p>
-              <h3 className="text-3xl font-black text-slate-900">{cancelledBookingsCount}</h3>
+
+            <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-6">
+              <div className="glass-card p-6 md:p-8">
+                <div className="flex items-center justify-between gap-4 mb-6">
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-400">Overview</p>
+                    <h3 className="text-2xl font-black text-slate-900">Inventory and activity graph</h3>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 px-4 py-3 text-right border border-slate-100">
+                    <p className="text-[11px] font-black uppercase text-slate-400">Average room rating</p>
+                    <p className="text-2xl font-black text-indigo-600">{avgRoomRating ? avgRoomRating.toFixed(1) : '0.0'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-end gap-4 h-72 rounded-3xl bg-linear-to-b from-slate-50 to-white p-5 border border-slate-100 overflow-hidden">
+                  {dashboardBars.map((bar) => {
+                    const height = `${(bar.percent / chartMax) * 100}%`;
+                    return (
+                      <div key={bar.label} className="flex-1 flex flex-col items-center justify-end gap-3 h-full min-w-0">
+                        <div className="w-full flex justify-center items-end h-full">
+                          <div className="w-full max-w-24 h-full flex items-end justify-center">
+                            <div
+                              className={`w-full rounded-t-3xl bg-linear-to-t ${bar.accent} shadow-lg shadow-slate-200`}
+                              style={{ height }}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs font-black uppercase text-slate-500">{bar.label}</p>
+                          <p className="text-lg font-black text-slate-900">{bar.value}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="glass-card p-6">
+                  <p className="text-xs font-black uppercase text-slate-400 mb-2">Quick stats</p>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-slate-600">Room payments</span>
+                      <span className="font-black text-slate-900">{roomPayments.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-slate-600">Flight payments</span>
+                      <span className="font-black text-slate-900">{flightPayments.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-slate-600">Room ratings</span>
+                      <span className="font-black text-slate-900">{roomRatingsCount}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass-card p-6 bg-slate-900 border-none text-white">
+                  <p className="text-xs font-black uppercase text-slate-400 mb-2">Health</p>
+                  <h3 className="text-2xl font-black mb-2">Live dashboard</h3>
+                  <p className="text-slate-300 text-sm leading-relaxed">
+                    Monitor inventory, bookings, and payment flow from one place. This graph uses live counts from the backend.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -501,6 +609,58 @@ const AdminPanelPage = () => {
                 </div>
               ))}
               {adminBookings.length === 0 && <p className="text-slate-500 font-semibold">No bookings found.</p>}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'room-ratings' && (
+          <div className="glass-card p-8">
+            <h2 className="text-2xl font-black text-slate-900 mb-6">Room Ratings</h2>
+            <div className="space-y-4">
+              {roomRatings.map((rating) => (
+                <div key={rating.id} className="rounded-2xl border border-slate-100 bg-white p-4">
+                  <p className="text-xs font-black uppercase text-slate-400">Room #{rating.roomId} • {rating.rating}/5</p>
+                  <p className="font-black text-slate-900">{rating.userEmail}</p>
+                  <p className="text-sm text-slate-500 font-semibold">{rating.review || 'No review provided'}</p>
+                </div>
+              ))}
+              {roomRatings.length === 0 && <p className="text-slate-500 font-semibold">No ratings found.</p>}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'room-payments' && (
+          <div className="glass-card p-8">
+            <h2 className="text-2xl font-black text-slate-900 mb-6">Room Payments</h2>
+            <div className="space-y-4">
+              {roomPayments.map((payment) => (
+                <div key={payment.id} className="rounded-2xl border border-slate-100 bg-white p-4">
+                  <p className="text-xs font-black uppercase text-slate-400">Booking #{payment.bookingId} • Room #{payment.roomId}</p>
+                  <p className="font-black text-slate-900">{payment.userEmail}</p>
+                  <p className="text-sm text-slate-500 font-semibold">{payment.travelerName} • Guests: {payment.guestCount}</p>
+                  <p className="text-sm text-slate-500 font-semibold">{payment.paymentMethod} • Ref: {payment.paymentReference}</p>
+                  <p className="text-sm text-slate-700 font-black">{payment.currency} {payment.totalAmount}</p>
+                </div>
+              ))}
+              {roomPayments.length === 0 && <p className="text-slate-500 font-semibold">No room payments found.</p>}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'flight-payments' && (
+          <div className="glass-card p-8">
+            <h2 className="text-2xl font-black text-slate-900 mb-6">Flight Payments</h2>
+            <div className="space-y-4">
+              {flightPayments.map((payment) => (
+                <div key={payment.id} className="rounded-2xl border border-slate-100 bg-white p-4">
+                  <p className="text-xs font-black uppercase text-slate-400">Booking #{payment.bookingId} • Flight #{payment.flightId}</p>
+                  <p className="font-black text-slate-900">{payment.userEmail}</p>
+                  <p className="text-sm text-slate-500 font-semibold">{payment.travelerName} • Guests: {payment.guestCount}</p>
+                  <p className="text-sm text-slate-500 font-semibold">{payment.paymentMethod} • Ref: {payment.paymentReference}</p>
+                  <p className="text-sm text-slate-700 font-black">{payment.currency} {payment.totalAmount}</p>
+                </div>
+              ))}
+              {flightPayments.length === 0 && <p className="text-slate-500 font-semibold">No flight payments found.</p>}
             </div>
           </div>
         )}

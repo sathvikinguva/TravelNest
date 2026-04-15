@@ -35,7 +35,7 @@ public class Flight {
     @Column
     private LocalDateTime arrivalTime;
 
-    @Column
+    @Column(length = 10000)
     private String imageUrl;
 
     @Column

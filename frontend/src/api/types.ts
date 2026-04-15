@@ -31,6 +31,52 @@ export interface ApiFlight {
   price: number;
 }
 
+export interface ApiRoomRatingSummary {
+  roomId: number;
+  averageRating: number;
+  ratingCount: number;
+}
+
+export interface ApiRoomRating {
+  id: number;
+  roomId: number;
+  userId: number;
+  userEmail: string;
+  rating: number;
+  review: string | null;
+  createdAt: string;
+}
+
+export interface ApiRoomPayment {
+  id: number;
+  bookingId: number;
+  userId: number;
+  userEmail: string;
+  roomId: number;
+  travelerName: string;
+  guestCount: number;
+  paymentMethod: string;
+  paymentReference: string;
+  totalAmount: string;
+  currency: string;
+  paidAt: string;
+}
+
+export interface ApiFlightPayment {
+  id: number;
+  bookingId: number;
+  userId: number;
+  userEmail: string;
+  flightId: number;
+  travelerName: string;
+  guestCount: number;
+  paymentMethod: string;
+  paymentReference: string;
+  totalAmount: string;
+  currency: string;
+  paidAt: string;
+}
+
 export type BookingType = 'ROOM' | 'FLIGHT';
 export type BookingStatus = 'BOOKED' | 'CANCELLED';
 
@@ -47,6 +93,8 @@ export interface ApiBooking {
   guestCount: number;
   paymentMethod: string;
   paymentReference: string;
+  cardLast4: string | null;
+  upiId: string | null;
   baseAmount: string;
   taxAmount: string;
   totalAmount: string;

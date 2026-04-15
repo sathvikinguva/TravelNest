@@ -1,6 +1,7 @@
 package com.travel.booking.dto;
 
 import com.travel.booking.entity.BookingType;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -19,6 +20,7 @@ public class BookingRequestDTO {
 
     @NotNull
     @Size(min = 2, max = 120)
+    @Pattern(regexp = "^[A-Za-z ]+$", message = "Traveler name must contain alphabets and spaces only")
     private String travelerName;
 
     @Size(max = 500)
@@ -33,11 +35,19 @@ public class BookingRequestDTO {
 
     @NotNull
     @Size(min = 2, max = 40)
+    @Pattern(regexp = "^(CARD|UPI)$", message = "Payment method must be CARD or UPI")
     private String paymentMethod;
 
     @NotNull
     @Size(min = 2, max = 40)
+    @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "Payment reference must be alphanumeric")
     private String paymentReference;
+
+    @Pattern(regexp = "^$|^[0-9]{4}$", message = "Card last4 must be exactly 4 digits")
+    private String cardLast4;
+
+    @Pattern(regexp = "^$|^[A-Za-z0-9._-]+@[A-Za-z]+$", message = "UPI ID format is invalid")
+    private String upiId;
 
     @NotNull
     @DecimalMin(value = "0.0", inclusive = true)
@@ -117,6 +127,22 @@ public class BookingRequestDTO {
 
     public void setPaymentReference(String paymentReference) {
         this.paymentReference = paymentReference;
+    }
+
+    public String getCardLast4() {
+        return cardLast4;
+    }
+
+    public void setCardLast4(String cardLast4) {
+        this.cardLast4 = cardLast4;
+    }
+
+    public String getUpiId() {
+        return upiId;
+    }
+
+    public void setUpiId(String upiId) {
+        this.upiId = upiId;
     }
 
     public BigDecimal getBaseAmount() {

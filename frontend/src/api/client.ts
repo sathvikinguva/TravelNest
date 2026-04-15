@@ -1,4 +1,14 @@
-import type { ApiAdminUser, ApiBooking, ApiFlight, ApiRoom, BookingType } from './types';
+import type {
+  ApiAdminUser,
+  ApiBooking,
+  ApiFlight,
+  ApiFlightPayment,
+  ApiRoom,
+  ApiRoomPayment,
+  ApiRoomRating,
+  ApiRoomRatingSummary,
+  BookingType,
+} from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 const TOKEN_STORAGE_KEY = 'travel.jwt';
@@ -73,6 +83,12 @@ export const clearAuthToken = () => {
 
 export const getRooms = () => request<ApiRoom[]>('/api/rooms');
 export const getRoomById = (id: number) => request<ApiRoom>(`/api/rooms/${id}`);
+export const getRoomRatingsSummary = () => request<ApiRoomRatingSummary[]>('/api/rooms/ratings');
+export const addRoomRating = (id: number, payload: { rating: number; review: string }) =>
+  request<ApiRoomRating>(`/api/rooms/${id}/ratings`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 
 export const getFlights = () => request<ApiFlight[]>('/api/flights');
 export const getFlightById = (id: number) => request<ApiFlight>(`/api/flights/${id}`);
@@ -142,6 +158,9 @@ export const updateAdminFlight = (
   });
 
 export const getAdminBookings = () => request<ApiBooking[]>('/api/admin/bookings');
+export const getAdminRoomRatings = () => request<ApiRoomRating[]>('/api/admin/room-ratings');
+export const getAdminRoomPayments = () => request<ApiRoomPayment[]>('/api/admin/payments/rooms');
+export const getAdminFlightPayments = () => request<ApiFlightPayment[]>('/api/admin/payments/flights');
 
 export const createBooking = (payload: {
   type: BookingType;
@@ -152,6 +171,8 @@ export const createBooking = (payload: {
   guestCount: number;
   paymentMethod: string;
   paymentReference: string;
+  cardLast4: string;
+  upiId: string;
   baseAmount: string;
   taxAmount: string;
   totalAmount: string;
