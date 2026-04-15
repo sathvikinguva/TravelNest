@@ -10,7 +10,7 @@ import type {
   BookingType,
 } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://travelnest-kc5e.onrender.com';
 const TOKEN_STORAGE_KEY = 'travel.jwt';
 
 export class ApiError extends Error {
