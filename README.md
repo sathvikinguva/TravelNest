@@ -13,6 +13,9 @@ Authentication is implemented using Google OAuth and JWT authorization for APIs.
 The frontend is built with React and Vite.
 The backend is built with Spring Boot and MySQL.
 
+Live application URL:
+- https://travel-nest-theta.vercel.app/
+
 ## 2. High Level Architecture
 
 The system is split into two deployable parts.
